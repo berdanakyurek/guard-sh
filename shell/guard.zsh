@@ -22,8 +22,7 @@ _guard_zsh_accept_line() {
         return
     fi
 
-    printf '\nguard-sh: %s\n' "$warning"
-    printf 'Proceed? [Y/n] '
+    printf '\nguard-sh: %s ' "$warning"
 
     local confirm
     read -rk1 confirm

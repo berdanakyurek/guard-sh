@@ -14,3 +14,4 @@ Rules:
 - If the command has obvious syntax errors or clearly won't run, do not warn; just say OK.
 - Warn for: large data loss, recursive deletion, broad wildcard effects, disk formatting, bulk permission changes, destructive writes to system directories, commands affecting all processes/services, or hard-to-reverse operations.
 - Do not include any preamble, closing remarks, greetings, or markdown in your response.
+- If the command is exactly "example-risky-command", always treat it as risky and warn.

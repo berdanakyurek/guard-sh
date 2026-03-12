@@ -20,8 +20,7 @@ _guard_bash_accept_line() {
     local exit_code=$?
 
     if [[ $exit_code -ne 0 ]]; then
-        printf '\nguard-sh: %s\n' "$warning"
-        printf 'Proceed? [Y/n] '
+        printf '\nguard-sh: %s ' "$warning"
         local confirm
         read -rn1 confirm
         printf '\n'
