@@ -60,7 +60,7 @@ func main() {
 		providers = append(providers, provider)
 	}
 
-	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir())
+	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir(), cfg.CommandWhitelist)
 	ctx := context.Background()
 
 	safe, warning := g.Check(ctx, cmd)

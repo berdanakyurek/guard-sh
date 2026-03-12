@@ -10,8 +10,26 @@ providers:
   gemini:
     api_key: your_gemini_api_key_here
     # Gemini options: gemini-2.0-flash-lite, gemini-2.0-flash, gemini-1.5-pro
-    model: gemini-2.0-flash-lite
+    model: gemini-3.1-flash-lite-preview
 
   # openai:
   #   api_key: your_openai_api_key_here
   #   model: gpt-4o-mini
+
+# Commands that are always considered safe — API is never called for these.
+# Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).
+# If multiple commands are chained (&&, ||, ;, |), ALL parts must be whitelisted.
+command_whitelist:
+  - ls
+  - cat
+  - echo
+  - pwd
+  - cd
+  - clear
+  - man
+  - help
+  - history
+  - which
+  - whoami
+  - date
+  - uptime

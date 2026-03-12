@@ -14,8 +14,9 @@ type ProviderConfig struct {
 }
 
 type Config struct {
-	ProviderOrder []string                   `yaml:"provider_order"`
-	Providers     map[string]*ProviderConfig `yaml:"providers"`
+	ProviderOrder    []string                   `yaml:"provider_order"`
+	Providers        map[string]*ProviderConfig `yaml:"providers"`
+	CommandWhitelist []string                   `yaml:"command_whitelist"`
 }
 
 func (c *Config) Get(name string) (*ProviderConfig, error) {
