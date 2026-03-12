@@ -14,20 +14,20 @@ type ProviderConfig struct {
 }
 
 type Config struct {
-	ActiveProvider string                    `yaml:"active_provider"`
-	Providers      map[string]*ProviderConfig `yaml:"providers"`
+	ProviderOrder []string                   `yaml:"provider_order"`
+	Providers     map[string]*ProviderConfig `yaml:"providers"`
 }
 
-func (c *Config) Active() (*ProviderConfig, error) {
-	p, ok := c.Providers[c.ActiveProvider]
+func (c *Config) Get(name string) (*ProviderConfig, error) {
+	p, ok := c.Providers[name]
 	if !ok {
-		return nil, fmt.Errorf("provider %q not found in config", c.ActiveProvider)
+		return nil, fmt.Errorf("provider %q not found in config", name)
 	}
 	if p.APIKey == "" {
-		return nil, fmt.Errorf("api_key is not set for provider %q", c.ActiveProvider)
+		return nil, fmt.Errorf("api_key is not set for provider %q", name)
 	}
 	if p.Model == "" {
-		p.Model = defaultModel(c.ActiveProvider)
+		p.Model = defaultModel(name)
 	}
 	return p, nil
 }
@@ -45,8 +45,8 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
-	if cfg.ActiveProvider == "" {
-		return Config{}, fmt.Errorf("active_provider is not set in config")
+	if len(cfg.ProviderOrder) == 0 {
+		return Config{}, fmt.Errorf("provider_order is empty in config")
 	}
 
 	return cfg, nil

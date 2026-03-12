@@ -8,6 +8,7 @@ import (
 
 	"github.com/Berdan/guard-sh/internal/config"
 	"github.com/Berdan/guard-sh/internal/guard"
+	"github.com/Berdan/guard-sh/internal/llm"
 	"github.com/Berdan/guard-sh/internal/llm/gemini"
 )
 
@@ -31,22 +32,30 @@ func main() {
 		os.Exit(0) // fail open
 	}
 
-	p, err := cfg.Active()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
-		os.Exit(0) // fail open
+	var names []string
+	var providers []guard.Provider
+
+	for _, name := range cfg.ProviderOrder {
+		p, err := cfg.Get(name)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(0) // fail open
+		}
+
+		var provider guard.Provider
+		switch name {
+		case "gemini":
+			provider = gemini.New(p.APIKey, p.Model)
+		default:
+			fmt.Fprintf(os.Stderr, "guard-sh: unknown provider %q\n", name)
+			os.Exit(0) // fail open
+		}
+
+		names = append(names, name)
+		providers = append(providers, provider)
 	}
 
-	var provider guard.Provider
-	switch cfg.ActiveProvider {
-	case "gemini":
-		provider = gemini.New(p.APIKey, p.Model)
-	default:
-		fmt.Fprintf(os.Stderr, "guard-sh: unknown provider %q\n", cfg.ActiveProvider)
-		os.Exit(0) // fail open
-	}
-
-	g := guard.New(provider, defaultPrompt, config.Dir())
+	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir())
 	ctx := context.Background()
 
 	safe, warning := g.Check(ctx, cmd)

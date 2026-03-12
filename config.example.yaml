@@ -1,8 +1,10 @@
 # guard-sh configuration
 # Copy this file to ~/.config/guard-sh/config.yaml and fill in your values.
 
-# The provider to use. Must match one of the keys under "providers".
-active_provider: gemini
+# Providers are tried in this order. If one fails (rate limit, etc.), the next is used.
+provider_order:
+  - gemini
+  # - openai
 
 providers:
   gemini:
