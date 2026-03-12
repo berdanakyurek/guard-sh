@@ -16,6 +16,11 @@ import (
 var defaultPrompt string
 
 func main() {
+	if len(os.Args) >= 2 && (os.Args[1] == "on" || os.Args[1] == "off") {
+		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source /path/to/shell/guard.bash\n")
+		os.Exit(2)
+	}
+
 	if len(os.Args) < 3 || os.Args[1] != "check" {
 		fmt.Fprintln(os.Stderr, "Usage: guard-sh check <command>")
 		os.Exit(2)

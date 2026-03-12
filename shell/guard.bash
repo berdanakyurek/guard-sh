@@ -49,28 +49,38 @@ _guard_enable() {
 
 _guard_disable() {
     trap - DEBUG
+    _GUARD_IN_PROMPT=1
     echo "guard-sh: disabled"
 }
 
 _guard_global_on() {
     local rc="$HOME/.bashrc"
-    local line="source \"$_GUARD_SCRIPT_PATH\""
-    if grep -qF "$line" "$rc" 2>/dev/null; then
+    local source_line="source \"$_GUARD_SCRIPT_PATH\""
+    local on_line="guard-sh on"
+
+    if ! grep -qF "$source_line" "$rc" 2>/dev/null; then
+        printf '\n# guard-sh\n%s\n%s\n' "$source_line" "$on_line" >> "$rc"
+        echo "guard-sh: enabled globally in $rc"
+        return
+    fi
+
+    if grep -qF "$on_line" "$rc" 2>/dev/null; then
         echo "guard-sh: already enabled globally in $rc"
     else
-        printf '\n# guard-sh\n%s\n' "$line" >> "$rc"
+        echo "$on_line" >> "$rc"
         echo "guard-sh: enabled globally in $rc"
     fi
 }
 
 _guard_global_off() {
     local rc="$HOME/.bashrc"
-    local line="source \"$_GUARD_SCRIPT_PATH\""
-    if grep -qF "$line" "$rc" 2>/dev/null; then
-        grep -v "^# guard-sh$" "$rc" | grep -vF "$line" > "${rc}.guardtmp" && mv "${rc}.guardtmp" "$rc"
+    local on_line="guard-sh on"
+
+    if grep -qF "$on_line" "$rc" 2>/dev/null; then
+        grep -vF "$on_line" "$rc" > "${rc}.guardtmp" && mv "${rc}.guardtmp" "$rc"
         echo "guard-sh: disabled globally in $rc"
     else
-        echo "guard-sh: not found in $rc"
+        echo "guard-sh: not enabled globally in $rc"
     fi
 }
 
@@ -85,5 +95,4 @@ guard-sh() {
     _GUARD_BUSY=0
 }
 
-trap '_guard_debug_trap' DEBUG
 PROMPT_COMMAND="_guard_prompt_begin${PROMPT_COMMAND:+; $PROMPT_COMMAND}; _guard_prompt_end"

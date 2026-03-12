@@ -71,7 +71,7 @@ if [[ $WITH_SHELL -eq 1 ]]; then
     if grep -qF "$SOURCE_LINE" "$RC_FILE" 2>/dev/null; then
         echo "Shell integration already present in $RC_FILE"
     else
-        printf '\n# guard-sh\n%s\n' "$SOURCE_LINE" >> "$RC_FILE"
+        printf '\n# guard-sh\n%s\nguard-sh on\n' "$SOURCE_LINE" >> "$RC_FILE"
         echo "Shell integration added to $RC_FILE"
         echo "Restart your shell or run: source $RC_FILE"
     fi
