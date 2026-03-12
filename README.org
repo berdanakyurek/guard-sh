@@ -18,11 +18,17 @@ guard-sh: Deletes all files in /var/log recursively. Are you sure? [Y/n]
 
 Commands in your *whitelist* skip the LLM entirely. Commands in your *blacklist* are always flagged without an LLM call.
 
+* Supported LLMs
+
+  - Gemini (free tier available at [[https://aistudio.google.com]])
+
+  Additional LLM integrations will be added.
+
 * Requirements
 
 - Go 1.22+
 - bash or zsh
-- A Gemini API key (free tier available at [[https://aistudio.google.com]])
+- API key(s) for one or more of the LLMs listed under the [[Supported LLMs]] section.
 
 * Installation
 
