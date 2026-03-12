@@ -68,10 +68,17 @@ if [[ $WITH_SHELL -eq 1 ]]; then
     esac
 
     SOURCE_LINE="source \"$SHELL_SCRIPT\""
+    ON_LINE="guard-sh on"
     if grep -qF "$SOURCE_LINE" "$RC_FILE" 2>/dev/null; then
-        echo "Shell integration already present in $RC_FILE"
+        if ! grep -qF "$ON_LINE" "$RC_FILE" 2>/dev/null; then
+            echo "$ON_LINE" >> "$RC_FILE"
+            echo "Shell integration updated in $RC_FILE (added guard-sh on)"
+            echo "Restart your shell or run: source $RC_FILE"
+        else
+            echo "Shell integration already present in $RC_FILE"
+        fi
     else
-        printf '\n# guard-sh\n%s\nguard-sh on\n' "$SOURCE_LINE" >> "$RC_FILE"
+        printf '\n# guard-sh\n%s\n%s\n' "$SOURCE_LINE" "$ON_LINE" >> "$RC_FILE"
         echo "Shell integration added to $RC_FILE"
         echo "Restart your shell or run: source $RC_FILE"
     fi
