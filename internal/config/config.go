@@ -8,10 +8,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type ProviderConfig struct {
+	APIKey string `yaml:"api_key"`
+	Model  string `yaml:"model"`
+}
+
 type Config struct {
-	Provider string `yaml:"provider"`
-	Model    string `yaml:"model"`
-	APIKey   string `yaml:"api_key"`
+	ActiveProvider string                    `yaml:"active_provider"`
+	Providers      map[string]*ProviderConfig `yaml:"providers"`
+}
+
+func (c *Config) Active() (*ProviderConfig, error) {
+	p, ok := c.Providers[c.ActiveProvider]
+	if !ok {
+		return nil, fmt.Errorf("provider %q not found in config", c.ActiveProvider)
+	}
+	if p.APIKey == "" {
+		return nil, fmt.Errorf("api_key is not set for provider %q", c.ActiveProvider)
+	}
+	if p.Model == "" {
+		p.Model = defaultModel(c.ActiveProvider)
+	}
+	return p, nil
 }
 
 func Load() (Config, error) {
@@ -27,14 +45,8 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
-	if cfg.Provider == "" {
-		cfg.Provider = "gemini"
-	}
-	if cfg.Model == "" {
-		cfg.Model = defaultModel(cfg.Provider)
-	}
-	if cfg.APIKey == "" {
-		return Config{}, fmt.Errorf("api_key is not set in config")
+	if cfg.ActiveProvider == "" {
+		return Config{}, fmt.Errorf("active_provider is not set in config")
 	}
 
 	return cfg, nil
@@ -52,6 +64,8 @@ func defaultModel(provider string) string {
 	switch provider {
 	case "gemini":
 		return "gemini-2.0-flash-lite"
+	case "openai":
+		return "gpt-4o-mini"
 	default:
 		return ""
 	}

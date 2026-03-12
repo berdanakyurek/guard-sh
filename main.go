@@ -31,12 +31,18 @@ func main() {
 		os.Exit(0) // fail open
 	}
 
+	p, err := cfg.Active()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+		os.Exit(0) // fail open
+	}
+
 	var provider guard.Provider
-	switch cfg.Provider {
+	switch cfg.ActiveProvider {
 	case "gemini":
-		provider = gemini.New(cfg.APIKey, cfg.Model)
+		provider = gemini.New(p.APIKey, p.Model)
 	default:
-		fmt.Fprintf(os.Stderr, "guard-sh: unknown provider %q\n", cfg.Provider)
+		fmt.Fprintf(os.Stderr, "guard-sh: unknown provider %q\n", cfg.ActiveProvider)
 		os.Exit(0) // fail open
 	}
 
