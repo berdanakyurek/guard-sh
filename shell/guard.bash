@@ -27,7 +27,7 @@ _guard_debug_trap() {
     _GUARD_BUSY=0
 
     if [[ $exit_code -ne 0 ]]; then
-        printf '\nguard-sh: %s ' "$warning"
+        printf 'guard-sh: %s ' "$warning"
         local confirm
         read -rn1 confirm </dev/tty
         printf '\n'
