@@ -84,7 +84,7 @@ command_whitelist:
   - clear
 #+end_src
 
-** Multiple providers
+** Multiple providers (Not Supported Yet)
 
 guard-sh tries providers in the order listed. If one fails (rate limit, network error, etc.), it falls back to the next.
 
