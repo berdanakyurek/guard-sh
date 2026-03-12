@@ -1,46 +1,30 @@
 package config
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Provider string
-	Model    string
-	APIKey   string
+	Provider string `yaml:"provider"`
+	Model    string `yaml:"model"`
+	APIKey   string `yaml:"api_key"`
 }
 
 func Load() (Config, error) {
-	path := filepath.Join(Dir(), "config")
+	path := filepath.Join(Dir(), "config.yaml")
 
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return Config{}, fmt.Errorf("config not found at %s — run install.sh first", path)
 	}
-	defer f.Close()
 
-	vals := make(map[string]string)
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		k, v, ok := strings.Cut(line, "=")
-		if !ok {
-			continue
-		}
-		vals[strings.TrimSpace(k)] = strings.TrimSpace(v)
-	}
-
-	cfg := Config{
-		Provider: vals["provider"],
-		Model:    vals["model"],
-		APIKey:   vals["api_key"],
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
 	if cfg.Provider == "" {

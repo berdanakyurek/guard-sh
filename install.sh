@@ -5,7 +5,7 @@ set -e
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="${HOME}/.local/bin"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/guard-sh"
-CONFIG_FILE="$CONFIG_DIR/config"
+CONFIG_FILE="$CONFIG_DIR/config.yaml"
 
 echo "=== guard-sh installer ==="
 echo ""
@@ -33,7 +33,7 @@ echo ""
 # --- Config ---
 mkdir -p "$CONFIG_DIR"
 
-cp "$INSTALL_DIR/config.example" "$CONFIG_FILE"
+cp "$INSTALL_DIR/config.example.yaml" "$CONFIG_FILE"
 chmod 600 "$CONFIG_FILE"
 echo "Config created: $CONFIG_FILE"
 echo "Edit it and set your api_key before using guard-sh."
