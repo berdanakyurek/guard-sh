@@ -1,0 +1,168 @@
+#+title: guard-sh
+#+author: Berdan Akyürek
+
+A shell safety layer powered by LLMs. Every command you type is checked before it runs — risky ones require confirmation.
+
+#+begin_example
+$ rm -rf /var/log/*
+guard-sh: Deletes all files in /var/log recursively. Are you sure? [Y/n]
+#+end_example
+
+* How it works
+
+1. You press Enter on a command.
+2. guard-sh intercepts it and sends it to an LLM.
+3. If the LLM considers it safe, the command runs normally.
+4. If not, you see a one-line warning and a ~[Y/n]~ prompt.
+5. Press ~Y~ to proceed, anything else to cancel.
+
+Commands in your *whitelist* skip the LLM entirely. Commands in your *blacklist* are always flagged without an LLM call.
+
+* Requirements
+
+- Go 1.22+
+- bash or zsh
+- A Gemini API key (free tier available at [[https://aistudio.google.com]])
+
+* Installation
+
+#+begin_src bash
+git clone https://github.com/berdanakyurek/guard-sh.git
+cd guard-sh
+bash install.sh
+#+end_src
+
+This will:
+- Build the ~guard-sh~ binary and install it to =~/.local/bin/=
+- Copy the default config to =~/.config/guard-sh/config.yaml=
+- Copy the default prompt to =~/.config/guard-sh/prompt.txt=
+- Add shell integration to your =.bashrc= or =.zshrc=
+
+Then edit your config and set your API key:
+
+#+begin_src bash
+~/.config/guard-sh/config.yaml
+#+end_src
+
+Open a new terminal — guard-sh will be active automatically.
+
+** Install without shell integration
+
+#+begin_src bash
+bash install.sh --without-shell
+#+end_src
+
+* Configuration
+
+Config file: =~/.config/guard-sh/config.yaml=
+
+#+begin_src yaml
+# Providers are tried in order. If one fails, the next is used.
+provider_order:
+  - gemini
+
+providers:
+  gemini:
+    api_key: YOUR_API_KEY_HERE
+    model: gemini-2.0-flash-lite   # optional, this is the default
+
+# Commands always considered safe — LLM is never called.
+# Only the base command name is needed: "ls" covers "ls -la", "ls /tmp", etc.
+# For chained commands (&&, ||, ;, |), ALL parts must be whitelisted.
+command_whitelist:
+  - ls
+  - cat
+  - echo
+  - pwd
+  - cd
+  - clear
+
+# Commands always flagged — LLM is never called, confirmation always required.
+# If ANY part of a chained command matches, the whole command is flagged.
+# command_blacklist:
+#   - rm
+#   - mkfs
+#+end_src
+
+** Multiple providers
+
+guard-sh tries providers in the order listed. If one fails (rate limit, network error, etc.), it falls back to the next.
+
+#+begin_src yaml
+provider_order:
+  - gemini
+  - openai
+
+providers:
+  gemini:
+    api_key: YOUR_GEMINI_KEY
+    model: gemini-2.0-flash-lite
+  openai:
+    api_key: YOUR_OPENAI_KEY
+    model: gpt-4o-mini
+#+end_src
+
+** Custom prompt
+
+The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
+
+* Usage
+
+** Session control
+
+#+begin_src bash
+guard-sh on      # enable for the current session
+guard-sh off     # disable for the current session
+#+end_src
+
+** Global control
+
+#+begin_src bash
+guard-sh on --global    # auto-enable in every new terminal
+guard-sh off --global   # don't auto-enable in new terminals
+#+end_src
+
+~off --global~ does not remove guard-sh from your shell — it only stops it from auto-enabling. You can still use ~guard-sh on~ in any terminal at any time.
+
+* Whitelist and blacklist
+
+** Whitelist
+
+Commands in the whitelist are always safe. The LLM is never called.
+
+#+begin_src yaml
+command_whitelist:
+  - ls
+  - git
+#+end_src
+
+- ~ls~, ~ls -la~, ~ls /tmp~ → all pass instantly
+- ~ls && rm -rf /~ → ~rm~ is not whitelisted, so the full command goes to the LLM
+- For chained commands, *all* parts must be whitelisted to skip the LLM
+
+** Blacklist
+
+Commands in the blacklist are always flagged. The LLM is never called.
+
+#+begin_src yaml
+command_blacklist:
+  - rm
+  - mkfs
+#+end_src
+
+- ~rm file.txt~ → flagged immediately: ~'rm' is blacklisted. Are you sure? [Y/n]~
+- ~ls && rm -rf /~ → ~rm~ is blacklisted, so the whole command is flagged
+- For chained commands, *any* part matching is enough to flag the command
+
+*Blacklist takes priority over whitelist.*
+
+* Shell support
+
+| Shell | Mechanism                            |
+|-------+--------------------------------------|
+| bash  | ~shopt -s extdebug~ + ~DEBUG~ trap   |
+| zsh   | ZLE widget bound to Enter            |
+
+* License
+
+GNU General Public License v3.0 — see [[file:LICENSE][LICENSE]].
