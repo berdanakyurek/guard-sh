@@ -19,6 +19,12 @@ providers:
 # Commands that are always considered safe — API is never called for these.
 # Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).
 # If multiple commands are chained (&&, ||, ;, |), ALL parts must be whitelisted.
+# Commands that are always flagged — API is never called, confirmation is always required.
+# If any part of a chained command matches, the whole command is flagged.
+# command_blacklist:
+#   - rm
+#   - mkfs
+
 command_whitelist:
   - ls
   - cat

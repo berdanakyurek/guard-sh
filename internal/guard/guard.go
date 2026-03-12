@@ -17,11 +17,12 @@ type Guard struct {
 	provider  Provider
 	prompt    string
 	whitelist map[string]bool
+	blacklist map[string]bool
 }
 
 // New creates a Guard. If a custom prompt.txt exists in configDir it takes
 // precedence over the compiled-in defaultPrompt.
-func New(provider Provider, defaultPrompt, configDir string, whitelist []string) *Guard {
+func New(provider Provider, defaultPrompt, configDir string, whitelist, blacklist []string) *Guard {
 	prompt := defaultPrompt
 	if data, err := os.ReadFile(filepath.Join(configDir, "prompt.txt")); err == nil {
 		prompt = string(data)
@@ -30,15 +31,26 @@ func New(provider Provider, defaultPrompt, configDir string, whitelist []string)
 	for _, cmd := range whitelist {
 		wl[strings.TrimSpace(cmd)] = true
 	}
-	return &Guard{provider: provider, prompt: prompt, whitelist: wl}
+	bl := make(map[string]bool, len(blacklist))
+	for _, cmd := range blacklist {
+		bl[strings.TrimSpace(cmd)] = true
+	}
+	return &Guard{provider: provider, prompt: prompt, whitelist: wl, blacklist: bl}
 }
 
 // Check queries the LLM. Returns (safe=true, warning="") if OK,
 // or (safe=false, warning="...") if the command needs confirmation.
 // On any error it fails open.
 func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning string) {
+	bases := extractBaseCommands(cmd)
+
+	if len(g.blacklist) > 0 {
+		if b := g.firstBlacklisted(bases); b != "" {
+			return false, "'" + b + "' is blacklisted. Are you sure?"
+		}
+	}
+
 	if len(g.whitelist) > 0 {
-		bases := extractBaseCommands(cmd)
 		if len(bases) > 0 && g.allWhitelisted(bases) {
 			return true, ""
 		}
@@ -55,6 +67,18 @@ func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning strin
 	}
 
 	return false, response
+}
+
+func (g *Guard) firstBlacklisted(bases []string) string {
+	for _, b := range bases {
+		if b == "" {
+			continue
+		}
+		if g.blacklist[b] || g.blacklist[filepath.Base(b)] {
+			return b
+		}
+	}
+	return ""
 }
 
 func (g *Guard) allWhitelisted(bases []string) bool {
