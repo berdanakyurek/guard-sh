@@ -2,8 +2,7 @@ package llm
 
 import (
 	"context"
-	"fmt"
-	"os"
+	"errors"
 
 	"github.com/Berdan/guard-sh/internal/guard"
 )
@@ -19,14 +18,11 @@ func NewMulti(names []string, providers []guard.Provider) *Multi {
 }
 
 func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string, error) {
-	var lastErr error
-	for i, p := range m.providers {
+	for _, p := range m.providers {
 		result, err := p.Query(ctx, systemPrompt, command)
 		if err == nil {
 			return result, nil
 		}
-		fmt.Fprintf(os.Stderr, "guard-sh: provider %q failed: %v\n", m.names[i], err)
-		lastErr = err
 	}
-	return "", fmt.Errorf("all providers failed, last error: %w", lastErr)
+	return "", errors.New("all providers failed")
 }

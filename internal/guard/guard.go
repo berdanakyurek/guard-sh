@@ -2,7 +2,6 @@ package guard
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,8 +34,7 @@ func New(provider Provider, defaultPrompt, configDir string) *Guard {
 func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning string) {
 	response, err := g.provider.Query(ctx, g.prompt, cmd)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "guard-sh: API error: %v\n", err)
-		return true, ""
+		return false, "Could not reach any provider. Proceed anyway?"
 	}
 
 	response = strings.TrimSpace(response)
