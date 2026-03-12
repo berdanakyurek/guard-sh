@@ -6,6 +6,11 @@ INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIN_DIR="${HOME}/.local/bin"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/guard-sh"
 CONFIG_FILE="$CONFIG_DIR/config.yaml"
+WITH_SHELL=1
+
+for arg in "$@"; do
+    [[ "$arg" == "--without-shell" ]] && WITH_SHELL=0
+done
 
 echo "=== guard-sh installer ==="
 echo ""
@@ -42,4 +47,35 @@ cp "$INSTALL_DIR/prompt.txt" "$CONFIG_DIR/prompt.txt"
 echo "Prompt copied: $CONFIG_DIR/prompt.txt (edit to customize)"
 
 echo ""
+
+# --- Shell integration ---
+if [[ $WITH_SHELL -eq 1 ]]; then
+    SHELL_NAME="$(basename "$SHELL")"
+    case "$SHELL_NAME" in
+        zsh)
+            RC_FILE="$HOME/.zshrc"
+            SHELL_SCRIPT="$INSTALL_DIR/shell/guard.zsh"
+            ;;
+        bash)
+            RC_FILE="$HOME/.bashrc"
+            SHELL_SCRIPT="$INSTALL_DIR/shell/guard.bash"
+            ;;
+        *)
+            echo "Unsupported shell: $SHELL_NAME (supported: zsh, bash)"
+            echo "Manually source the appropriate file from $INSTALL_DIR/shell/"
+            exit 0
+            ;;
+    esac
+
+    SOURCE_LINE="source \"$SHELL_SCRIPT\""
+    if grep -qF "$SOURCE_LINE" "$RC_FILE" 2>/dev/null; then
+        echo "Shell integration already present in $RC_FILE"
+    else
+        printf '\n# guard-sh\n%s\n' "$SOURCE_LINE" >> "$RC_FILE"
+        echo "Shell integration added to $RC_FILE"
+        echo "Restart your shell or run: source $RC_FILE"
+    fi
+    echo ""
+fi
+
 echo "Done! Run: guard-sh check \"<command>\""
