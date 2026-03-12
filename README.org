@@ -16,7 +16,7 @@ guard-sh: Deletes all files in /var/log recursively. Are you sure? [Y/n]
 4. If not, you see a one-line warning and a ~[Y/n]~ prompt.
 5. Press ~Y~ to proceed, anything else to cancel.
 
-Commands in your *whitelist* skip the LLM entirely. Commands in your *blacklist* are always flagged without an LLM call.
+Commands in your *whitelist* skip the LLM entirely.
 
 * Supported LLMs
 
@@ -28,7 +28,7 @@ Commands in your *whitelist* skip the LLM entirely. Commands in your *blacklist*
 
 - Go 1.22+
 - bash or zsh
-- API key(s) for one or more of the LLMs listed under the [[Supported LLMs]] section.
+- API key(s) for one or more of the LLMs listed under the [[*Supported LLMs][Supported LLMs]] section.
 
 * Installation
 
@@ -44,7 +44,7 @@ This will:
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
 - Add shell integration to your =.bashrc= or =.zshrc=
 
-Then edit your config and set your API key:
+Then edit your config and set your API key(s):
 
 #+begin_src bash
 ~/.config/guard-sh/config.yaml
@@ -70,7 +70,7 @@ provider_order:
 providers:
   gemini:
     api_key: YOUR_API_KEY_HERE
-    model: gemini-2.0-flash-lite   # optional, this is the default
+    model: gemini-3.1-flash-lite-preview   # optional, this is the default
 
 # Commands always considered safe — LLM is never called.
 # Only the base command name is needed: "ls" covers "ls -la", "ls /tmp", etc.
@@ -82,12 +82,6 @@ command_whitelist:
   - pwd
   - cd
   - clear
-
-# Commands always flagged — LLM is never called, confirmation always required.
-# If ANY part of a chained command matches, the whole command is flagged.
-# command_blacklist:
-#   - rm
-#   - mkfs
 #+end_src
 
 ** Multiple providers
@@ -130,9 +124,7 @@ guard-sh off --global   # don't auto-enable in new terminals
 
 ~off --global~ does not remove guard-sh from your shell — it only stops it from auto-enabling. You can still use ~guard-sh on~ in any terminal at any time.
 
-* Whitelist and blacklist
-
-** Whitelist
+* Whitelist
 
 Commands in the whitelist are always safe. The LLM is never called.
 
@@ -146,28 +138,12 @@ command_whitelist:
 - ~ls && rm -rf /~ → ~rm~ is not whitelisted, so the full command goes to the LLM
 - For chained commands, *all* parts must be whitelisted to skip the LLM
 
-** Blacklist
-
-Commands in the blacklist are always flagged. The LLM is never called.
-
-#+begin_src yaml
-command_blacklist:
-  - rm
-  - mkfs
-#+end_src
-
-- ~rm file.txt~ → flagged immediately: ~'rm' is blacklisted. Are you sure? [Y/n]~
-- ~ls && rm -rf /~ → ~rm~ is blacklisted, so the whole command is flagged
-- For chained commands, *any* part matching is enough to flag the command
-
-*Blacklist takes priority over whitelist.*
-
 * Shell support
 
-| Shell | Mechanism                            |
-|-------+--------------------------------------|
-| bash  | ~shopt -s extdebug~ + ~DEBUG~ trap   |
-| zsh   | ZLE widget bound to Enter            |
+| Shell | Mechanism                          |
+|-------+------------------------------------|
+| bash  | ~shopt -s extdebug~ + ~DEBUG~ trap |
+| zsh   | ZLE widget bound to Enter          |
 
 * License
 
