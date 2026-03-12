@@ -1,0 +1,13 @@
+# guard-sh configuration
+# Copy this file to ~/.config/guard-sh/config and fill in your values.
+
+# LLM provider to use.
+# Supported: gemini
+provider=gemini
+
+# Your API key for the selected provider.
+api_key=your_api_key_here
+
+# Model to use.
+# Gemini options: gemini-2.0-flash-lite, gemini-2.0-flash, gemini-1.5-pro
+model=gemini-3.1-flash-lite-preview
