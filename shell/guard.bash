@@ -14,6 +14,7 @@ _guard_debug_trap() {
     [[ $_GUARD_BUSY -eq 1 ]] && return 0
     [[ $_GUARD_IN_PROMPT -eq 1 ]] && return 0
     [[ "$BASH_COMMAND" == _guard_* ]] && return 0
+    [[ "$BASH_COMMAND" == _GUARD_* ]] && return 0
     [[ "$BASH_COMMAND" == guard-sh* ]] && return 0
 
     command -v guard-sh &>/dev/null || return 0
