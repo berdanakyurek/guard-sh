@@ -39,3 +39,6 @@ command_whitelist:
   - whoami
   - date
   - uptime
+
+command_blacklist:
+  - example-blacklisted-command
