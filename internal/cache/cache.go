@@ -49,7 +49,7 @@ func (c *Cache) Get(cmd string) (string, bool) {
 
 func (c *Cache) Set(cmd, response string) {
 	c.entries[cmd] = entry{Response: response, Ts: time.Now().Unix()}
-	c.save()
+	c.evict()
 }
 
 func (c *Cache) evict() {

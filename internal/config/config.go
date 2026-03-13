@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -83,6 +84,35 @@ func UpdateCacheEnabled(enabled bool) error {
 	lines := strings.Split(string(data), "\n")
 	for i, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "cache_enabled:") {
+			lines[i] = newLine
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+
+	// Not found — append before command_whitelist or at end
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "command_whitelist:" {
+			lines = append(lines[:i], append([]string{newLine, ""}, lines[i:]...)...)
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+	lines = append(lines, newLine)
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+}
+
+// UpdateCacheMaxSize rewrites only the cache_max_size line in the config file.
+func UpdateCacheMaxSize(size int) error {
+	path := filepath.Join(Dir(), "config.yaml")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", path)
+	}
+
+	newLine := "cache_max_size: " + strconv.Itoa(size)
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "cache_max_size:") {
 			lines[i] = newLine
 			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
 		}

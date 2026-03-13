@@ -194,8 +194,9 @@ cache_max_size: 1000   # max number of cached responses
 You can also toggle caching from the command line:
 
 #+begin_src bash
-guard-sh cache on
-guard-sh cache off
+guard-sh cache on           # enable caching
+guard-sh cache off          # disable caching
+guard-sh cache size 500     # set max cache size
 #+end_src
 
 * Shell support

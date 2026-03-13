@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -108,7 +109,7 @@ func runStatus(args []string) {
 
 func runCache(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off]\n")
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off|size <n>]\n")
 		os.Exit(2)
 	}
 	switch args[0] {
@@ -124,8 +125,23 @@ func runCache(args []string) {
 			os.Exit(1)
 		}
 		fmt.Println("guard-sh: cache disabled")
+	case "size":
+		if len(args) < 2 {
+			fmt.Fprintf(os.Stderr, "Usage: guard-sh cache size <n>\n")
+			os.Exit(2)
+		}
+		n, err := strconv.Atoi(args[1])
+		if err != nil || n <= 0 {
+			fmt.Fprintf(os.Stderr, "guard-sh: size must be a positive integer\n")
+			os.Exit(1)
+		}
+		if err := config.UpdateCacheMaxSize(n); err != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("guard-sh: cache max size set to %d\n", n)
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off]\n")
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off|size <n>]\n")
 		os.Exit(2)
 	}
 }
