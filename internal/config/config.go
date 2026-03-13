@@ -182,6 +182,8 @@ func DefaultModel(provider string) string {
 		return "gemini-2.0-flash-lite"
 	case "openai":
 		return "gpt-4o-mini"
+	case "deepseek":
+		return "deepseek-chat"
 	default:
 		return ""
 	}

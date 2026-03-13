@@ -4,7 +4,7 @@
 # Providers are tried in this order. If one fails (rate limit, etc.), the next is used.
 provider_order:
   - gemini
-  # - openai
+  - deepseek
 
 providers:
   gemini:
@@ -12,9 +12,11 @@ providers:
     # Gemini options: gemini-3.1-flash-lite-preview, gemini-2.0-flash-lite, gemini-2.0-flash
     model: gemini-3.1-flash-lite-preview
 
-  # openai:
-  #   api_key: your_openai_api_key_here
-  #   model: gpt-4o-mini
+  deepseek:
+    api_key: your_deepseek_api_key_here
+    model: deepseek-chat
+
+
 
 # How long to wait for an LLM response, in seconds. Defaults to 10 if not set.
 timeout_seconds: 10
