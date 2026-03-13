@@ -14,6 +14,7 @@ import (
 	"github.com/Berdan/guard-sh/internal/llm"
 	"github.com/Berdan/guard-sh/internal/llm/deepseek"
 	"github.com/Berdan/guard-sh/internal/llm/gemini"
+	"github.com/Berdan/guard-sh/internal/llm/openai"
 )
 
 //go:embed prompt.txt
@@ -258,6 +259,8 @@ func main() {
 			provider = gemini.New(p.APIKey, p.Model)
 		case "deepseek":
 			provider = deepseek.New(p.APIKey, p.Model)
+		case "openai":
+			provider = openai.New(p.APIKey, p.Model)
 		default:
 			fmt.Fprintf(os.Stderr, "guard-sh: unknown provider %q\n", name)
 			os.Exit(0) // fail open

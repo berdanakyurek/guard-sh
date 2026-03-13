@@ -22,6 +22,7 @@ Commands in your *whitelist* skip the LLM entirely.
 
   - Gemini (free tier available at [[https://aistudio.google.com]])
   - DeepSeek ([[https://platform.deepseek.com]])
+  - OpenAI ([[https://platform.openai.com]])
 
 * Requirements
 
@@ -89,10 +90,14 @@ guard-sh tries providers in the order listed. If one fails (rate limit, network 
 
 #+begin_src yaml
 provider_order:
+  - openai
   - deepseek
   - gemini
 
 providers:
+  openai:
+    api_key: YOUR_OPENAI_KEY
+    model: gpt-4o-mini          # optional, this is the default
   deepseek:
     api_key: YOUR_DEEPSEEK_KEY
     model: deepseek-chat        # optional, this is the default
