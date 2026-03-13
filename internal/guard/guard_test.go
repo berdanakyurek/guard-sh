@@ -36,7 +36,7 @@ func TestWhitelist(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		g := New(&mockProvider{}, "", "", tt.wl)
+		g := New(&mockProvider{}, "", "", tt.wl, 0)
 		safe, _ := g.Check(context.Background(), tt.cmd)
 		if safe != tt.wantSafe {
 			t.Errorf("cmd=%q whitelist=%v: got safe=%v, want %v", tt.cmd, tt.wl, safe, tt.wantSafe)

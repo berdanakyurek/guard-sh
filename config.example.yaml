@@ -19,6 +19,12 @@ providers:
 # How long to wait for an LLM response, in seconds. Defaults to 10 if not set.
 timeout_seconds: 10
 
+# Cache LLM responses to avoid repeated API calls for the same command.
+cache_enabled: true
+
+# Maximum number of cached responses to keep. Oldest entries are evicted when full.
+cache_max_size: 1000
+
 # Commands that are always considered safe — API is never called for these.
 # Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).
 # If multiple commands are chained (&&, ||, ;, |), ALL parts must be whitelisted.

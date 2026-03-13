@@ -18,6 +18,8 @@ type Config struct {
 	ProviderOrder    []string                   `yaml:"provider_order"`
 	Providers        map[string]*ProviderConfig `yaml:"providers"`
 	TimeoutSeconds   int                        `yaml:"timeout_seconds"`
+	CacheEnabled     *bool                      `yaml:"cache_enabled"`
+	CacheMaxSize     int                        `yaml:"cache_max_size"`
 	CommandWhitelist []string                   `yaml:"command_whitelist"`
 }
 
@@ -61,6 +63,40 @@ func Dir() string {
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "guard-sh")
+}
+
+// UpdateCacheEnabled rewrites only the cache_enabled line in the config file.
+func UpdateCacheEnabled(enabled bool) error {
+	path := filepath.Join(Dir(), "config.yaml")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", path)
+	}
+
+	val := "true"
+	if !enabled {
+		val = "false"
+	}
+	newLine := "cache_enabled: " + val
+
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), "cache_enabled:") {
+			lines[i] = newLine
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+
+	// Not found — append before command_whitelist or at end
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "command_whitelist:" {
+			lines = append(lines[:i], append([]string{newLine, ""}, lines[i:]...)...)
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+	lines = append(lines, newLine)
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
 }
 
 // UpdateWhitelist rewrites only the command_whitelist section of the config

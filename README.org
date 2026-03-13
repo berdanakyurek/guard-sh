@@ -138,6 +138,8 @@ Shows the current session and global on/off state, the active provider list with
   session   ● on
   global    ● on
   config    ~/.config/guard-sh/config.yaml
+  cache     ● on
+            1000 max entries
 
   providers
   1  gemini    gemini-3.1-flash-lite-preview
@@ -176,6 +178,24 @@ You can manage the whitelist from the command line:
 guard-sh whitelist              # list all whitelisted commands
 guard-sh whitelist add git      # add a command
 guard-sh whitelist remove git   # remove a command
+#+end_src
+
+* Cache
+
+guard-sh caches LLM responses locally so the same command is never sent to the API twice. The cache is stored at =~/.config/guard-sh/cache.json=.
+
+When the cache is full, the least recently used entries are evicted first.
+
+#+begin_src yaml
+cache_enabled: true    # set to false to disable caching
+cache_max_size: 1000   # max number of cached responses
+#+end_src
+
+You can also toggle caching from the command line:
+
+#+begin_src bash
+guard-sh cache on
+guard-sh cache off
 #+end_src
 
 * Shell support

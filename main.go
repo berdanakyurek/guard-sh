@@ -61,6 +61,16 @@ func runStatus(args []string) {
 		return
 	}
 
+	cacheEnabled := cfg.CacheEnabled == nil || *cfg.CacheEnabled
+	cacheMaxSize := cfg.CacheMaxSize
+	if cacheMaxSize <= 0 {
+		cacheMaxSize = 1000
+	}
+	fmt.Printf("  %s  %s\n", label("cache   "), statusBadge(map[bool]string{true: "on", false: "off"}[cacheEnabled]))
+	if cacheEnabled {
+		fmt.Printf("  %s  %s%d%s\n", label("        "), dim, cacheMaxSize, reset+dim+" max entries"+reset)
+	}
+
 	fmt.Printf("\n  %sproviders%s\n", bold, reset)
 	for i, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
@@ -94,6 +104,30 @@ func runStatus(args []string) {
 	}
 
 	fmt.Println()
+}
+
+func runCache(args []string) {
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off]\n")
+		os.Exit(2)
+	}
+	switch args[0] {
+	case "on":
+		if err := config.UpdateCacheEnabled(true); err != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("guard-sh: cache enabled")
+	case "off":
+		if err := config.UpdateCacheEnabled(false); err != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("guard-sh: cache disabled")
+	default:
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off]\n")
+		os.Exit(2)
+	}
 }
 
 func runWhitelist(args []string) {
@@ -170,6 +204,11 @@ func main() {
 		return
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "cache" {
+		runCache(os.Args[2:])
+		return
+	}
+
 	if len(os.Args) < 3 || os.Args[1] != "check" {
 		fmt.Fprintln(os.Stderr, "Usage: guard-sh check <command>")
 		os.Exit(2)
@@ -209,7 +248,11 @@ func main() {
 		providers = append(providers, provider)
 	}
 
-	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir(), cfg.CommandWhitelist)
+	cacheMaxSize := 0 // disabled
+	if cfg.CacheEnabled == nil || *cfg.CacheEnabled {
+		cacheMaxSize = cfg.CacheMaxSize
+	}
+	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Berdan/guard-sh/internal/cache"
 )
 
 // Provider is the interface that LLM backends must implement.
@@ -17,11 +19,12 @@ type Guard struct {
 	provider  Provider
 	prompt    string
 	whitelist map[string]bool
+	cache     *cache.Cache
 }
 
 // New creates a Guard. If a custom prompt.txt exists in configDir it takes
 // precedence over the compiled-in defaultPrompt.
-func New(provider Provider, defaultPrompt, configDir string, whitelist []string) *Guard {
+func New(provider Provider, defaultPrompt, configDir string, whitelist []string, cacheMaxSize int) *Guard {
 	prompt := defaultPrompt
 	if data, err := os.ReadFile(filepath.Join(configDir, "prompt.txt")); err == nil {
 		prompt = string(data)
@@ -30,7 +33,7 @@ func New(provider Provider, defaultPrompt, configDir string, whitelist []string)
 	for _, cmd := range whitelist {
 		wl[strings.TrimSpace(cmd)] = true
 	}
-	return &Guard{provider: provider, prompt: prompt, whitelist: wl}
+	return &Guard{provider: provider, prompt: prompt, whitelist: wl, cache: cache.Load(configDir, cacheMaxSize)}
 }
 
 // Check queries the LLM. Returns (safe=true, warning="") if OK,
@@ -44,12 +47,25 @@ func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning strin
 		}
 	}
 
+	if g.cache != nil {
+		if cached, ok := g.cache.Get(cmd); ok {
+			if cached == "OK" || cached == "" {
+				return true, ""
+			}
+			return false, cached
+		}
+	}
+
 	response, err := g.provider.Query(ctx, g.prompt, cmd)
 	if err != nil {
 		return false, "Could not reach any provider. Proceed anyway?"
 	}
 
 	response = strings.TrimSpace(response)
+	if g.cache != nil {
+		g.cache.Set(cmd, response)
+	}
+
 	if response == "OK" || response == "" {
 		return true, ""
 	}
