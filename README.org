@@ -124,6 +124,38 @@ guard-sh off --global   # don't auto-enable in new terminals
 
 ~off --global~ does not remove guard-sh from your shell — it only stops it from auto-enabling. You can still use ~guard-sh on~ in any terminal at any time.
 
+** Status
+
+#+begin_src bash
+guard-sh status
+#+end_src
+
+Shows the current session and global on/off state, the active provider list with models, and the whitelist (up to 10 entries).
+
+#+begin_example
+  guard-sh
+
+  session   ● on
+  global    ● on
+  config    ~/.config/guard-sh/config.yaml
+
+  providers
+  1  gemini    gemini-3.1-flash-lite-preview
+
+  whitelist
+  1  ls
+  2  cat
+  3  echo
+  4  pwd
+  5  cd
+  6  clear
+  7  man
+  8  help
+  9  history
+  10  which
+  +3 more (to see all, run "guard-sh whitelist")
+#+end_example
+
 * Whitelist
 
 Commands in the whitelist are always safe. The LLM is never called.
@@ -137,6 +169,14 @@ command_whitelist:
 - ~ls~, ~ls -la~, ~ls /tmp~ → all pass instantly
 - ~ls && rm -rf /~ → ~rm~ is not whitelisted, so the full command goes to the LLM
 - For chained commands, *all* parts must be whitelisted to skip the LLM
+
+You can manage the whitelist from the command line:
+
+#+begin_src bash
+guard-sh whitelist              # list all whitelisted commands
+guard-sh whitelist add git      # add a command
+guard-sh whitelist remove git   # remove a command
+#+end_src
 
 * Shell support
 
