@@ -95,6 +95,64 @@ func runStatus(args []string) {
 	fmt.Println()
 }
 
+func runWhitelist(args []string) {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+		os.Exit(1)
+	}
+
+	if len(args) == 0 {
+		for _, cmd := range cfg.CommandWhitelist {
+			fmt.Println(cmd)
+		}
+		return
+	}
+
+	subcmd := args[0]
+	if subcmd != "add" && subcmd != "remove" || len(args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh whitelist [add|remove] <command>\n")
+		os.Exit(2)
+	}
+	target := args[1]
+
+	switch subcmd {
+	case "add":
+		for _, cmd := range cfg.CommandWhitelist {
+			if cmd == target {
+				fmt.Fprintf(os.Stderr, "guard-sh: %q is already in the whitelist\n", target)
+				os.Exit(1)
+			}
+		}
+		cfg.CommandWhitelist = append(cfg.CommandWhitelist, target)
+		if err := config.UpdateWhitelist(cfg.CommandWhitelist); err != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("guard-sh: %q added to whitelist\n", target)
+
+	case "remove":
+		found := false
+		updated := cfg.CommandWhitelist[:0]
+		for _, cmd := range cfg.CommandWhitelist {
+			if cmd == target {
+				found = true
+			} else {
+				updated = append(updated, cmd)
+			}
+		}
+		if !found {
+			fmt.Fprintf(os.Stderr, "guard-sh: %q is not in the whitelist\n", target)
+			os.Exit(1)
+		}
+		if err := config.UpdateWhitelist(updated); err != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("guard-sh: %q removed from whitelist\n", target)
+	}
+}
+
 func main() {
 	if len(os.Args) >= 2 && (os.Args[1] == "on" || os.Args[1] == "off") {
 		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source /path/to/shell/guard.bash\n")
@@ -103,6 +161,11 @@ func main() {
 
 	if len(os.Args) >= 2 && os.Args[1] == "status" {
 		runStatus(os.Args[2:])
+		return
+	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "whitelist" {
+		runWhitelist(os.Args[2:])
 		return
 	}
 

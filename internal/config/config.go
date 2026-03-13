@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -59,6 +60,53 @@ func Dir() string {
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "guard-sh")
+}
+
+// UpdateWhitelist rewrites only the command_whitelist section of the config
+// file, preserving all other content (comments, provider config, etc.).
+func UpdateWhitelist(whitelist []string) error {
+	path := filepath.Join(Dir(), "config.yaml")
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", path)
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	// Find the command_whitelist: line
+	wlIdx := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "command_whitelist:" {
+			wlIdx = i
+			break
+		}
+	}
+
+	// Build replacement list lines
+	var newItems []string
+	for _, cmd := range whitelist {
+		newItems = append(newItems, "  - "+cmd)
+	}
+
+	if wlIdx == -1 {
+		// Section missing — append it
+		lines = append(lines, "command_whitelist:")
+		lines = append(lines, newItems...)
+	} else {
+		// Remove existing list items right after the section header
+		end := wlIdx + 1
+		for end < len(lines) && strings.HasPrefix(lines[end], "  - ") {
+			end++
+		}
+		replaced := make([]string, 0, len(lines)-(end-wlIdx-1)+len(newItems))
+		replaced = append(replaced, lines[:wlIdx+1]...)
+		replaced = append(replaced, newItems...)
+		replaced = append(replaced, lines[end:]...)
+		lines = replaced
+	}
+
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
 }
 
 func DefaultModel(provider string) string {
