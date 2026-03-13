@@ -28,7 +28,7 @@ func (c *Config) Get(name string) (*ProviderConfig, error) {
 		return nil, fmt.Errorf("api_key is not set for provider %q", name)
 	}
 	if p.Model == "" {
-		p.Model = defaultModel(name)
+		p.Model = DefaultModel(name)
 	}
 	return p, nil
 }
@@ -61,7 +61,7 @@ func Dir() string {
 	return filepath.Join(home, ".config", "guard-sh")
 }
 
-func defaultModel(provider string) string {
+func DefaultModel(provider string) string {
 	switch provider {
 	case "gemini":
 		return "gemini-2.0-flash-lite"

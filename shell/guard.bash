@@ -89,9 +89,16 @@ _guard_global_off() {
 guard-sh() {
     _GUARD_BUSY=1
     case "$1" in
-        on)  [[ "$2" == "--global" ]] && _guard_global_on || _guard_enable ;;
-        off) [[ "$2" == "--global" ]] && _guard_global_off || _guard_disable ;;
-        *)   command guard-sh "$@" ;;
+        on)     [[ "$2" == "--global" ]] && _guard_global_on || _guard_enable ;;
+        off)    [[ "$2" == "--global" ]] && _guard_global_off || _guard_disable ;;
+        status)
+            local session="off"
+            [[ "$(trap -p DEBUG)" == *_guard_debug_trap* ]] && session="on"
+            local global="off"
+            grep -qF "guard-sh on" "$HOME/.bashrc" 2>/dev/null && global="on"
+            command guard-sh status --session="$session" --global="$global"
+            ;;
+        *)      command guard-sh "$@" ;;
     esac
     _GUARD_BUSY=0
 }

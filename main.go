@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Berdan/guard-sh/internal/config"
 	"github.com/Berdan/guard-sh/internal/guard"
@@ -15,10 +16,94 @@ import (
 //go:embed prompt.txt
 var defaultPrompt string
 
+const (
+	reset  = "\033[0m"
+	bold   = "\033[1m"
+	dim    = "\033[2m"
+	green  = "\033[32m"
+	red    = "\033[31m"
+	cyan   = "\033[36m"
+)
+
+func statusBadge(val string) string {
+	if val == "on" {
+		return green + "● on" + reset
+	}
+	return red + "○ off" + reset
+}
+
+func label(s string) string {
+	return dim + s + reset
+}
+
+func runStatus(args []string) {
+	session := "off"
+	global := "off"
+	for _, arg := range args {
+		if v, ok := strings.CutPrefix(arg, "--session="); ok {
+			session = v
+		} else if v, ok := strings.CutPrefix(arg, "--global="); ok {
+			global = v
+		}
+	}
+
+	cfg, err := config.Load()
+	configPath := config.Dir() + "/config.yaml"
+
+	fmt.Printf("  %sguard-sh%s\n\n", bold+cyan, reset)
+	fmt.Printf("  %s  %s\n", label("session "), statusBadge(session))
+	fmt.Printf("  %s  %s\n", label("global  "), statusBadge(global))
+	fmt.Printf("  %s  %s%s%s\n", label("config  "), dim, configPath, reset)
+
+	if err != nil {
+		fmt.Printf("\n  %s%s%s\n\n", red, err.Error(), reset)
+		return
+	}
+
+	fmt.Printf("\n  %sproviders%s\n", bold, reset)
+	for i, name := range cfg.ProviderOrder {
+		p := cfg.Providers[name]
+		model := ""
+		if p != nil {
+			model = p.Model
+		}
+		if model == "" {
+			model = config.DefaultModel(name)
+		}
+		fmt.Printf("  %s%d%s  %s%-10s%s%s%s\n",
+			dim, i+1, reset,
+			cyan, name, reset,
+			dim, model+reset,
+		)
+	}
+
+	if len(cfg.CommandWhitelist) > 0 {
+		fmt.Printf("\n  %swhitelist%s\n", bold, reset)
+		const max = 10
+		shown := cfg.CommandWhitelist
+		if len(shown) > max {
+			shown = shown[:max]
+		}
+		for i, cmd := range shown {
+			fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, dim, cmd, reset)
+		}
+		if remaining := len(cfg.CommandWhitelist) - max; remaining > 0 {
+			fmt.Printf("  %s+%d more (to see all, run \"guard-sh whitelist\")%s\n", dim, remaining, reset)
+		}
+	}
+
+	fmt.Println()
+}
+
 func main() {
 	if len(os.Args) >= 2 && (os.Args[1] == "on" || os.Args[1] == "off") {
 		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source /path/to/shell/guard.bash\n")
 		os.Exit(2)
+	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "status" {
+		runStatus(os.Args[2:])
+		return
 	}
 
 	if len(os.Args) < 3 || os.Args[1] != "check" {
