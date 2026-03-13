@@ -12,6 +12,7 @@ import (
 	"github.com/Berdan/guard-sh/internal/config"
 	"github.com/Berdan/guard-sh/internal/guard"
 	"github.com/Berdan/guard-sh/internal/llm"
+	"github.com/Berdan/guard-sh/internal/llm/claude"
 	"github.com/Berdan/guard-sh/internal/llm/deepseek"
 	"github.com/Berdan/guard-sh/internal/llm/gemini"
 	"github.com/Berdan/guard-sh/internal/llm/openai"
@@ -257,6 +258,8 @@ func main() {
 		switch name {
 		case "gemini":
 			provider = gemini.New(p.APIKey, p.Model)
+		case "claude":
+			provider = claude.New(p.APIKey, p.Model)
 		case "deepseek":
 			provider = deepseek.New(p.APIKey, p.Model)
 		case "openai":

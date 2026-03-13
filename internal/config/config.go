@@ -180,6 +180,8 @@ func DefaultModel(provider string) string {
 	switch provider {
 	case "gemini":
 		return "gemini-2.0-flash-lite"
+	case "claude":
+		return "claude-haiku-4-5-20251001"
 	case "openai":
 		return "gpt-4o-mini"
 	case "deepseek":
