@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Berdan/guard-sh/internal/config"
 	"github.com/Berdan/guard-sh/internal/guard"
@@ -209,7 +210,13 @@ func main() {
 	}
 
 	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir(), cfg.CommandWhitelist)
-	ctx := context.Background()
+
+	timeout := cfg.TimeoutSeconds
+	if timeout <= 0 {
+		timeout = 10
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
 
 	safe, warning := g.Check(ctx, cmd)
 	if safe {

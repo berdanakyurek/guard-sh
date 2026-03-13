@@ -17,6 +17,7 @@ type ProviderConfig struct {
 type Config struct {
 	ProviderOrder    []string                   `yaml:"provider_order"`
 	Providers        map[string]*ProviderConfig `yaml:"providers"`
+	TimeoutSeconds   int                        `yaml:"timeout_seconds"`
 	CommandWhitelist []string                   `yaml:"command_whitelist"`
 }
 

@@ -16,6 +16,9 @@ providers:
   #   api_key: your_openai_api_key_here
   #   model: gpt-4o-mini
 
+# How long to wait for an LLM response, in seconds. Defaults to 10 if not set.
+timeout_seconds: 10
+
 # Commands that are always considered safe — API is never called for these.
 # Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).
 # If multiple commands are chained (&&, ||, ;, |), ALL parts must be whitelisted.
