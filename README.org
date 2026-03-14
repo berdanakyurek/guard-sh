@@ -146,48 +146,6 @@ guard-sh help
 
 Lists all commands and their usage.
 
-#+begin_example
-  guard-sh
-
-  A shell safety layer powered by LLMs. Intercepts commands before execution and prompts for confirmation on risky ones.
-
-  session
-  guard-sh on              enable for the current terminal session
-  guard-sh off             disable for the current terminal session
-
-  global
-  guard-sh on --global     auto-enable in every new terminal
-  guard-sh off --global    stop auto-enabling in new terminals
-
-  status
-  guard-sh status          show session/global state, prompt, timeout, cache stats, providers, whitelist
-
-  debug
-  guard-sh check "<command>" --debug    trace whitelist, cache, provider attempts, and LLM response
-
-  healthcheck
-  guard-sh healthcheck     validate providers: API keys, models, latency, shell integration
-
-  whitelist
-  guard-sh whitelist                  list all whitelisted commands
-  guard-sh whitelist add <cmd>        add a command — LLM is never called for it
-  guard-sh whitelist remove <cmd>     remove a command from the whitelist
-
-  provider
-  guard-sh provider add       interactively add a provider (select model, enter API key)
-  guard-sh provider remove    interactively remove a configured provider
-  guard-sh provider order     interactively reorder providers with arrow keys
-
-  cache
-  guard-sh cache on           enable response caching
-  guard-sh cache off          disable response caching
-  guard-sh cache size <n>     set max number of cached responses
-  guard-sh cache clear        delete all cached responses
-
-  config
-  ~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout
-#+end_example
-
 ** Session control
 
 #+begin_src bash
