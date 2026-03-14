@@ -38,7 +38,8 @@ func runHelp() {
 	fmt.Printf("  %s\n", b("cache"))
 	fmt.Printf("  %s %s\n", c("guard-sh cache on"), d("enable response caching"))
 	fmt.Printf("  %s %s\n", c("guard-sh cache off"), d("disable response caching"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh cache size <n>"), d("set max number of cached responses"))
+	fmt.Printf("  %s %s\n", c("guard-sh cache size <n>"), d("set max number of cached responses"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh cache clear"), d("delete all cached responses"))
 
 	// Config
 	fmt.Printf("  %s\n", b("config"))

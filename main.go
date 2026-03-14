@@ -143,8 +143,15 @@ func runCache(args []string) {
 			os.Exit(1)
 		}
 		fmt.Printf("guard-sh: cache max size set to %d\n", n)
+	case "clear":
+		path := config.Dir() + "/cache.json"
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("guard-sh: cache cleared")
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off|size <n>]\n")
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh cache [on|off|clear|size <n>]\n")
 		os.Exit(2)
 	}
 }

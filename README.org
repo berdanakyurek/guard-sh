@@ -241,6 +241,7 @@ You can also toggle caching from the command line:
 guard-sh cache on           # enable caching
 guard-sh cache off          # disable caching
 guard-sh cache size 500     # set max cache size
+guard-sh cache clear        # delete all cached responses
 #+end_src
 
 * Shell support
