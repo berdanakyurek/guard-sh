@@ -150,7 +150,7 @@ Checks all configured providers without spending any tokens. Reports:
   guard-sh healthcheck
 
   providers
-  openai      gpt-4o-mini                         ● ok  (759ms)
+  openai      gpt-4o-mini                          ● ok  (759ms)
   gemini      gemini-3.1-flash-lite-preview        ● ok  (184ms)
   deepseek    deepseek-chat                        ✗ HTTP 401: Authentication Fails
   claude      claude-haiku-4-5-20251001            ● ok  (510ms)
