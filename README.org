@@ -45,14 +45,6 @@ This will:
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
 - Add shell integration to your =.bashrc= or =.zshrc=
 
-Then edit your config and set your API key(s):
-
-#+begin_src bash
-~/.config/guard-sh/config.yaml
-#+end_src
-
-Open a new terminal — guard-sh will be active automatically.
-
 ** Install without shell integration
 
 #+begin_src bash
@@ -62,8 +54,12 @@ bash install.sh --without-shell
 * Configuration
 
 Config file: =~/.config/guard-sh/config.yaml=
-
 Providers can be added interactively with =guard-sh provider add= — see [[*Providers][Providers]].
+The whitelist can also be managed with =guard-sh whitelist= commands — see [[*Whitelist][Whitelist]].
+Cache settings can also be managed with =guard-sh cache= — see [[*Cache][Cache]].
+Or you can edit the config file manually.
+
+An example config file is as follows:
 
 #+begin_src yaml
 # Providers are tried in order. If one fails, the next is used.
@@ -105,10 +101,6 @@ timeout_seconds: 10
 cache_enabled: true
 cache_max_size: 1000
 #+end_src
-
-The whitelist can also be managed with =guard-sh whitelist= commands — see [[*Whitelist][Whitelist]].
-
-Cache settings can also be toggled from the command line — see [[*Cache][Cache]].
 
 ** Custom prompt
 
