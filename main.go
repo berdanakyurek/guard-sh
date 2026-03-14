@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -65,6 +66,15 @@ func runStatus(args []string) {
 		return
 	}
 
+	promptPath := config.Dir() + "/prompt.txt"
+	fmt.Printf("  %s  %s%s%s\n", label("prompt  "), dim, promptPath, reset)
+
+	timeout := cfg.TimeoutSeconds
+	if timeout <= 0 {
+		timeout = 10
+	}
+	fmt.Printf("  %s  %s%ds%s\n", label("timeout "), dim, timeout, reset)
+
 	cacheEnabled := cfg.CacheEnabled == nil || *cfg.CacheEnabled
 	cacheMaxSize := cfg.CacheMaxSize
 	if cacheMaxSize <= 0 {
@@ -72,7 +82,15 @@ func runStatus(args []string) {
 	}
 	fmt.Printf("  %s  %s\n", label("cache   "), statusBadge(map[bool]string{true: "on", false: "off"}[cacheEnabled]))
 	if cacheEnabled {
-		fmt.Printf("  %s  %s%d%s\n", label("        "), dim, cacheMaxSize, reset+dim+" max entries"+reset)
+		fmt.Printf("  %s  %s%d max entries%s\n", label("        "), dim, cacheMaxSize, reset)
+		cachePath := config.Dir() + "/cache.json"
+		if info, statErr := os.Stat(cachePath); statErr == nil {
+			var entries map[string]json.RawMessage
+			if data, readErr := os.ReadFile(cachePath); readErr == nil {
+				_ = json.Unmarshal(data, &entries)
+			}
+			fmt.Printf("  %s  %s%d entries, %s%s\n", label("        "), dim, len(entries), formatBytes(info.Size()), reset)
+		}
 	}
 
 	fmt.Printf("\n  %sproviders%s\n", bold, reset)
@@ -108,6 +126,17 @@ func runStatus(args []string) {
 	}
 
 	fmt.Println()
+}
+
+func formatBytes(b int64) string {
+	switch {
+	case b >= 1024*1024:
+		return fmt.Sprintf("%.1f MB", float64(b)/(1024*1024))
+	case b >= 1024:
+		return fmt.Sprintf("%.1f KB", float64(b)/1024)
+	default:
+		return fmt.Sprintf("%d B", b)
+	}
 }
 
 func runCache(args []string) {
