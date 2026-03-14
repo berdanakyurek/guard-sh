@@ -9,6 +9,9 @@ guard-sh: Deletes all files in /var/log recursively. Are you sure? [Y/n]
 #+end_example
 
 * How it works
+  :PROPERTIES:
+  :CUSTOM_ID: how-it-works
+  :END:
 
 1. You press Enter on a command.
 2. guard-sh intercepts it and sends it to an LLM.
@@ -19,6 +22,9 @@ guard-sh: Deletes all files in /var/log recursively. Are you sure? [Y/n]
 Commands in your *whitelist* skip the LLM entirely.
 
 * Supported LLMs
+  :PROPERTIES:
+  :CUSTOM_ID: supported-llms
+  :END:
 
   - Gemini (free tier available at [[https://aistudio.google.com]])
   - DeepSeek ([[https://platform.deepseek.com]])
@@ -26,12 +32,18 @@ Commands in your *whitelist* skip the LLM entirely.
   - Claude ([[https://console.anthropic.com]])
 
 * Requirements
+  :PROPERTIES:
+  :CUSTOM_ID: requirements
+  :END:
 
 - Go 1.22+
 - bash or zsh
-- API key(s) for one or more of the LLMs listed under the [[*Supported LLMs][Supported LLMs]] section.
+- API key(s) for one or more of the LLMs listed under the [[#supported-llms][Supported LLMs]] section.
 
 * Installation
+  :PROPERTIES:
+  :CUSTOM_ID: installation
+  :END:
 
 #+begin_src bash
 git clone https://github.com/berdanakyurek/guard-sh.git
@@ -52,11 +64,14 @@ bash install.sh --without-shell
 #+end_src
 
 * Configuration
+  :PROPERTIES:
+  :CUSTOM_ID: configuration
+  :END:
 
 Config file: =~/.config/guard-sh/config.yaml=
-- Providers can be added interactively with =guard-sh provider add= — see [[*Providers][Providers]].
-- The whitelist can also be managed with =guard-sh whitelist= commands — see [[*Whitelist][Whitelist]].
-- Cache settings can also be managed with =guard-sh cache= — see [[*Cache][Cache]].
+- Providers can be added interactively with =guard-sh provider add= — see [[#providers][Providers]].
+- The whitelist can also be managed with =guard-sh whitelist= commands — see [[#whitelist][Whitelist]].
+- Cache settings can also be managed with =guard-sh cache= — see [[#cache][Cache]].
 
 Or you can edit the config file manually.
 
@@ -109,6 +124,9 @@ cache_max_size: 1000
 The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
 
 * Usage
+  :PROPERTIES:
+  :CUSTOM_ID: usage
+  :END:
 
 ** Help
 
@@ -196,6 +214,9 @@ Shows the current session and global on/off state, the active provider list with
 #+end_example
 
 * Providers
+  :PROPERTIES:
+  :CUSTOM_ID: providers
+  :END:
 
 #+begin_src bash
 guard-sh provider add      # interactively add a provider
@@ -207,6 +228,9 @@ guard-sh provider remove   # interactively remove a provider
 ~provider remove~ lists your configured providers and removes the one you select.
 
 * Whitelist
+  :PROPERTIES:
+  :CUSTOM_ID: whitelist
+  :END:
 
 Commands in the whitelist are always safe. The LLM is never called.
 
@@ -229,6 +253,9 @@ guard-sh whitelist remove git   # remove a command
 #+end_src
 
 * Cache
+  :PROPERTIES:
+  :CUSTOM_ID: cache
+  :END:
 
 guard-sh caches LLM responses locally so the same command is never sent to the API twice. The cache is stored at =~/.config/guard-sh/cache.json=.
 
@@ -249,6 +276,9 @@ guard-sh cache clear        # delete all cached responses
 #+end_src
 
 * Shell support
+  :PROPERTIES:
+  :CUSTOM_ID: shell-support
+  :END:
 
 | Shell | Mechanism                          |
 |-------+------------------------------------|
@@ -256,5 +286,8 @@ guard-sh cache clear        # delete all cached responses
 | zsh   | ZLE widget bound to Enter          |
 
 * License
+  :PROPERTIES:
+  :CUSTOM_ID: license
+  :END:
 
 GNU General Public License v3.0 — see [[file:LICENSE][LICENSE]].
