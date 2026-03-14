@@ -1,5 +1,6 @@
-# guard-sh configuration
+# guard-sh configuration example
 # Copy this file to ~/.config/guard-sh/config.yaml and fill in your values.
+# Or add providers interactively with: guard-sh provider add
 
 # Providers are tried in this order. If one fails (rate limit, etc.), the next is used.
 provider_order:
@@ -9,21 +10,21 @@ provider_order:
   - claude
 
 providers:
+  openai:
+    api_key: YOUR_OPENAI_KEY
+    model: gpt-4o-mini                    # optional, this is the default
+
   gemini:
-    api_key: your_gemini_api_key_here
-    model: gemini-3.1-flash-lite-preview
+    api_key: YOUR_GEMINI_KEY
+    model: gemini-3.1-flash-lite-preview  # optional, this is the default
 
   deepseek:
-    api_key: your_deepseek_api_key_here
-    model: deepseek-chat
-
-  openai:
-    api_key: your_openai_api_key_here
-    model: gpt-4o-mini
+    api_key: YOUR_DEEPSEEK_KEY
+    model: deepseek-chat                  # optional, this is the default
 
   claude:
-    api_key: your_anthropic_api_key_here
-    model: claude-haiku-4-5-20251001
+    api_key: YOUR_ANTHROPIC_KEY
+    model: claude-haiku-4-5-20251001      # optional, this is the default
 
 # How long to wait for an LLM response, in seconds. Defaults to 10 if not set.
 timeout_seconds: 10
