@@ -54,9 +54,9 @@ bash install.sh --without-shell
 * Configuration
 
 Config file: =~/.config/guard-sh/config.yaml=
-- Providers can be added interactively with =guard-sh provider add= (see *Providers* below).
-- The whitelist can also be managed with =guard-sh whitelist= (see *Whitelist* below).
-- Cache settings can also be toggled with =guard-sh cache= (see *Cache* below).
+- Providers can be added interactively with =guard-sh provider add= — see [[*Providers][Providers]].
+- The whitelist can also be managed with =guard-sh whitelist= commands — see [[*Whitelist][Whitelist]].
+- Cache settings can also be managed with =guard-sh cache= — see [[*Cache][Cache]].
 
 Or you can edit the config file manually.
 
