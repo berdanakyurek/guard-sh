@@ -2,13 +2,24 @@ package guard
 
 import (
 	"context"
+	"errors"
+	"os"
 	"testing"
 )
 
-type mockProvider struct{}
+type mockProvider struct {
+	response string
+	err      error
+}
 
 func (m *mockProvider) Query(_ context.Context, _, _ string) (string, error) {
-	return "mock warning", nil
+	if m.err != nil {
+		return "", m.err
+	}
+	if m.response == "" {
+		return "mock warning", nil
+	}
+	return m.response, nil
 }
 
 func TestWhitelist(t *testing.T) {
@@ -72,4 +83,101 @@ func TestExtractBaseCommands(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestCheck_SafeResponse(t *testing.T) {
+	g := New(&mockProvider{response: "OK"}, "", "", nil, 0, nil)
+	safe, warning := g.Check(context.Background(), "rm -rf /")
+	if !safe {
+		t.Errorf("expected safe=true, got false (warning=%q)", warning)
+	}
+}
+
+func TestCheck_UnsafeResponse(t *testing.T) {
+	g := New(&mockProvider{response: "Deletes everything"}, "", "", nil, 0, nil)
+	safe, warning := g.Check(context.Background(), "rm -rf /")
+	if safe {
+		t.Error("expected safe=false, got true")
+	}
+	if warning != "Deletes everything" {
+		t.Errorf("got warning=%q, want %q", warning, "Deletes everything")
+	}
+}
+
+func TestCheck_ProviderError_FailsOpen(t *testing.T) {
+	g := New(&mockProvider{err: errors.New("network error")}, "", "", nil, 0, nil)
+	safe, _ := g.Check(context.Background(), "rm -rf /")
+	if safe {
+		t.Error("expected safe=false when provider errors (fail open still prompts)")
+	}
+}
+
+func TestCheck_CacheHit(t *testing.T) {
+	dir := t.TempDir()
+	called := 0
+	p := &countingProvider{response: "OK", onCall: func() { called++ }}
+	g := New(p, "", dir, nil, 100, nil)
+
+	g.Check(context.Background(), "ls -la")
+	g.Check(context.Background(), "ls -la")
+
+	if called != 1 {
+		t.Errorf("expected provider called once (cache hit on second), got %d", called)
+	}
+}
+
+func TestCheck_CacheDisabled(t *testing.T) {
+	called := 0
+	p := &countingProvider{response: "OK", onCall: func() { called++ }}
+	g := New(p, "", "", nil, 0, nil) // cacheMaxSize=0 disables cache
+
+	g.Check(context.Background(), "ls -la")
+	g.Check(context.Background(), "ls -la")
+
+	if called != 2 {
+		t.Errorf("expected provider called twice (no cache), got %d", called)
+	}
+}
+
+func TestCheck_CustomPrompt(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(dir+"/prompt.txt", []byte("custom prompt"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var receivedPrompt string
+	p := &capturingProvider{onQuery: func(prompt, _ string) { receivedPrompt = prompt }}
+	g := New(p, "default prompt", dir, nil, 0, nil)
+	g.Check(context.Background(), "ls")
+	if receivedPrompt != "custom prompt" {
+		t.Errorf("expected custom prompt, got %q", receivedPrompt)
+	}
+}
+
+func TestCheck_DefaultPrompt(t *testing.T) {
+	var receivedPrompt string
+	p := &capturingProvider{onQuery: func(prompt, _ string) { receivedPrompt = prompt }}
+	g := New(p, "default prompt", t.TempDir(), nil, 0, nil)
+	g.Check(context.Background(), "ls")
+	if receivedPrompt != "default prompt" {
+		t.Errorf("expected default prompt, got %q", receivedPrompt)
+	}
+}
+
+type countingProvider struct {
+	response string
+	onCall   func()
+}
+
+func (p *countingProvider) Query(_ context.Context, _, _ string) (string, error) {
+	p.onCall()
+	return p.response, nil
+}
+
+type capturingProvider struct {
+	onQuery func(prompt, cmd string)
+}
+
+func (p *capturingProvider) Query(_ context.Context, prompt, cmd string) (string, error) {
+	p.onQuery(prompt, cmd)
+	return "OK", nil
 }
