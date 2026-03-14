@@ -139,15 +139,25 @@ guard-sh off --global   # don't auto-enable in new terminals
 guard-sh healthcheck
 #+end_src
 
-Checks all configured providers — validates API keys and model names without spending any tokens.
+Checks all configured providers without spending any tokens. Reports:
+
+- API key and model validity for each provider
+- Response latency per provider
+- Shell integration status (~.bashrc~ / ~.zshrc~)
+- Config errors (e.g. unknown provider names in ~provider_order~)
 
 #+begin_example
   guard-sh healthcheck
 
-  openai      gpt-4o-mini                          ● ok
-  gemini      gemini-3.1-flash-lite-preview        ● ok
+  providers
+  openai      gpt-4o-mini                         ● ok  (759ms)
+  gemini      gemini-3.1-flash-lite-preview        ● ok  (184ms)
   deepseek    deepseek-chat                        ✗ HTTP 401: Authentication Fails
-  claude      claude-haiku-4-5-20251001            ● ok
+  claude      claude-haiku-4-5-20251001            ● ok  (510ms)
+
+  shell
+  bash    ~/.bashrc    ● present
+  zsh     ~/.zshrc     ○ not found
 #+end_example
 
 ** Status

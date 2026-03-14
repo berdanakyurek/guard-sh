@@ -6,10 +6,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Berdan/guard-sh/internal/config"
 )
+
+var knownProviders = map[string]bool{
+	"gemini": true, "claude": true, "openai": true, "deepseek": true,
+}
 
 func runHealthcheck() {
 	fmt.Printf("  %sguard-sh healthcheck%s\n\n", bold+cyan, reset)
@@ -24,8 +31,24 @@ func runHealthcheck() {
 	defer cancel()
 
 	hc := &http.Client{Timeout: 10 * time.Second}
-	allOK := true
 
+	// --- Config validation ---
+	var configWarnings []string
+	for _, name := range cfg.ProviderOrder {
+		if !knownProviders[name] {
+			configWarnings = append(configWarnings, fmt.Sprintf("unknown provider %q in provider_order", name))
+		}
+	}
+	if len(configWarnings) > 0 {
+		fmt.Printf("  %sconfig%s\n", bold, reset)
+		for _, w := range configWarnings {
+			fmt.Printf("  %s✗ %s%s\n", red, w, reset)
+		}
+		fmt.Println()
+	}
+
+	// --- Providers ---
+	fmt.Printf("  %sproviders%s\n", bold, reset)
 	for _, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
 		apiKey := ""
@@ -41,13 +64,20 @@ func runHealthcheck() {
 		nameCol := fmt.Sprintf("%-10s", name)
 		modelCol := fmt.Sprintf("%-34s", model)
 
-		if apiKey == "" {
-			fmt.Printf("  %s%s%s  %s%s%s  %s✗ api_key not set%s\n",
+		if !knownProviders[name] {
+			// already reported in config section, skip API check
+			fmt.Printf("  %s%s%s  %s%s%s  %s✗ unknown provider%s\n",
 				cyan, nameCol, reset, dim, modelCol, reset, red, reset)
-			allOK = false
 			continue
 		}
 
+		if apiKey == "" {
+			fmt.Printf("  %s%s%s  %s%s%s  %s✗ api_key not set%s\n",
+				cyan, nameCol, reset, dim, modelCol, reset, red, reset)
+			continue
+		}
+
+		start := time.Now()
 		var checkErr error
 		switch name {
 		case "gemini":
@@ -58,24 +88,38 @@ func runHealthcheck() {
 			checkErr = healthOpenAI(ctx, hc, apiKey, model)
 		case "deepseek":
 			checkErr = healthDeepSeek(ctx, hc, apiKey, model)
-		default:
-			checkErr = fmt.Errorf("unknown provider")
 		}
+		ms := time.Since(start).Milliseconds()
 
 		if checkErr != nil {
 			fmt.Printf("  %s%s%s  %s%s%s  %s✗ %s%s\n",
 				cyan, nameCol, reset, dim, modelCol, reset, red, checkErr.Error(), reset)
-			allOK = false
 		} else {
-			fmt.Printf("  %s%s%s  %s%s%s  %s● ok%s\n",
-				cyan, nameCol, reset, dim, modelCol, reset, green, reset)
+			fmt.Printf("  %s%s%s  %s%s%s  %s● ok%s  %s(%dms)%s\n",
+				cyan, nameCol, reset, dim, modelCol, reset, green, reset, dim, ms, reset)
+		}
+	}
+
+	// --- Shell integration ---
+	fmt.Printf("\n  %sshell%s\n", bold, reset)
+	home, _ := os.UserHomeDir()
+	shellChecks := []struct{ shell, rc, marker string }{
+		{"bash", filepath.Join(home, ".bashrc"), "guard.bash"},
+		{"zsh", filepath.Join(home, ".zshrc"), "guard.zsh"},
+	}
+	for _, s := range shellChecks {
+		shellCol := fmt.Sprintf("%-6s", s.shell)
+		data, err := os.ReadFile(s.rc)
+		if err != nil || !strings.Contains(string(data), s.marker) {
+			fmt.Printf("  %s%s%s  %s%s%s  %s○ not found%s\n",
+				cyan, shellCol, reset, dim, s.rc, reset, dim, reset)
+		} else {
+			fmt.Printf("  %s%s%s  %s%s%s  %s● present%s\n",
+				cyan, shellCol, reset, dim, s.rc, reset, green, reset)
 		}
 	}
 
 	fmt.Println()
-	if allOK {
-		fmt.Printf("  %sall providers healthy%s\n\n", green, reset)
-	}
 }
 
 // healthGemini calls the Gemini model info endpoint (no tokens).
