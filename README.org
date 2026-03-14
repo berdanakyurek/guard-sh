@@ -106,6 +106,10 @@ cache_enabled: true
 cache_max_size: 1000
 #+end_src
 
+The whitelist can also be managed with =guard-sh whitelist= commands — see [[*Whitelist][Whitelist]].
+
+Cache settings can also be toggled from the command line — see [[*Cache][Cache]].
+
 ** Custom prompt
 
 The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
