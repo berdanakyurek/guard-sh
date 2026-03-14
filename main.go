@@ -240,6 +240,11 @@ func main() {
 		return
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "provider" {
+		runProvider(os.Args[2:])
+		return
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "help" {
 		runHelp()
 		return

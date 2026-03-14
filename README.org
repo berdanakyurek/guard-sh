@@ -202,6 +202,17 @@ Shows the current session and global on/off state, the active provider list with
   +3 more (to see all, run "guard-sh whitelist")
 #+end_example
 
+* Providers
+
+#+begin_src bash
+guard-sh provider add      # interactively add a provider
+guard-sh provider remove   # interactively remove a provider
+#+end_src
+
+~provider add~ walks you through selecting a provider, picking a model, and entering an API key. The provider is saved to your config and added to ~provider_order~ automatically.
+
+~provider remove~ lists your configured providers and removes the one you select.
+
 * Whitelist
 
 Commands in the whitelist are always safe. The LLM is never called.

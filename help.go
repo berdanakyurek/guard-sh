@@ -34,6 +34,11 @@ func runHelp() {
 	fmt.Printf("  %s %s\n", c("guard-sh whitelist add <cmd>"), d("add a command — LLM is never called for it"))
 	fmt.Printf("  %s %s\n\n", c("guard-sh whitelist remove <cmd>"), d("remove a command from the whitelist"))
 
+	// Provider
+	fmt.Printf("  %s\n", b("provider"))
+	fmt.Printf("  %s %s\n", c("guard-sh provider add"), d("interactively add a provider (select model, enter API key)"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh provider remove"), d("interactively remove a configured provider"))
+
 	// Cache
 	fmt.Printf("  %s\n", b("cache"))
 	fmt.Printf("  %s %s\n", c("guard-sh cache on"), d("enable response caching"))

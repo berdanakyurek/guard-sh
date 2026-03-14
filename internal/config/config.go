@@ -176,10 +176,137 @@ func UpdateWhitelist(whitelist []string) error {
 	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
 }
 
+func AddProvider(name, apiKey, model string) error {
+	path := filepath.Join(Dir(), "config.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", path)
+	}
+	lines := strings.Split(string(data), "\n")
+	lines = addToProviderOrder(lines, name)
+	lines = upsertProviderBlock(lines, name, apiKey, model)
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+}
+
+func RemoveProvider(name string) error {
+	path := filepath.Join(Dir(), "config.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", path)
+	}
+	lines := strings.Split(string(data), "\n")
+	lines = removeFromProviderOrder(lines, name)
+	lines = deleteProviderBlock(lines, name)
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
+}
+
+func addToProviderOrder(lines []string, name string) []string {
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "- "+name {
+			return lines // already present
+		}
+	}
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "provider_order:" {
+			j := i + 1
+			for j < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[j]), "- ") {
+				j++
+			}
+			result := make([]string, 0, len(lines)+1)
+			result = append(result, lines[:j]...)
+			result = append(result, "  - "+name)
+			result = append(result, lines[j:]...)
+			return result
+		}
+	}
+	return lines
+}
+
+func removeFromProviderOrder(lines []string, name string) []string {
+	result := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "- "+name {
+			continue
+		}
+		result = append(result, line)
+	}
+	return result
+}
+
+// findProviderBlock returns (start, end) where start is the "  name:" line index
+// and end is the first line after the block. Returns -1,-1 if not found.
+func findProviderBlock(lines []string, name string) (int, int) {
+	header := "  " + name + ":"
+	for i, line := range lines {
+		if line == header {
+			j := i + 1
+			for j < len(lines) && strings.HasPrefix(lines[j], "    ") {
+				j++
+			}
+			return i, j
+		}
+	}
+	return -1, -1
+}
+
+func upsertProviderBlock(lines []string, name, apiKey, model string) []string {
+	start, end := findProviderBlock(lines, name)
+	newBlock := []string{
+		"  " + name + ":",
+		"    api_key: " + apiKey,
+		"    model: " + model,
+	}
+	if start >= 0 {
+		result := make([]string, 0, len(lines))
+		result = append(result, lines[:start]...)
+		result = append(result, newBlock...)
+		result = append(result, lines[end:]...)
+		return result
+	}
+	// Insert at end of providers section
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "providers:" {
+			j := i + 1
+			for j < len(lines) {
+				l := lines[j]
+				if l != "" && !strings.HasPrefix(l, " ") {
+					break
+				}
+				j++
+			}
+			for j > i+1 && strings.TrimSpace(lines[j-1]) == "" {
+				j--
+			}
+			insert := append([]string{""}, newBlock...)
+			result := make([]string, 0, len(lines)+len(insert))
+			result = append(result, lines[:j]...)
+			result = append(result, insert...)
+			result = append(result, lines[j:]...)
+			return result
+		}
+	}
+	return lines
+}
+
+func deleteProviderBlock(lines []string, name string) []string {
+	start, end := findProviderBlock(lines, name)
+	if start < 0 {
+		return lines
+	}
+	// Also consume trailing blank line
+	if end < len(lines) && strings.TrimSpace(lines[end]) == "" {
+		end++
+	}
+	result := make([]string, 0, len(lines))
+	result = append(result, lines[:start]...)
+	result = append(result, lines[end:]...)
+	return result
+}
+
 func DefaultModel(provider string) string {
 	switch provider {
 	case "gemini":
-		return "gemini-2.0-flash-lite"
+		return "gemini-3.1-flash-lite-preview"
 	case "claude":
 		return "claude-haiku-4-5-20251001"
 	case "openai":
