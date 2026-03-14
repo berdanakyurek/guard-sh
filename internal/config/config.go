@@ -51,10 +51,6 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid config: %w", err)
 	}
 
-	if len(cfg.ProviderOrder) == 0 {
-		return Config{}, fmt.Errorf("provider_order is empty in config")
-	}
-
 	return cfg, nil
 }
 
@@ -186,7 +182,11 @@ func UpdateProviderOrder(order []string) error {
 
 	start := -1
 	for i, line := range lines {
-		if strings.TrimSpace(line) == "provider_order:" {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "provider_order:" || strings.HasPrefix(trimmed, "provider_order:") {
+			if trimmed != "provider_order:" {
+				lines[i] = "provider_order:"
+			}
 			start = i
 			break
 		}
@@ -243,7 +243,12 @@ func addToProviderOrder(lines []string, name string) []string {
 		}
 	}
 	for i, line := range lines {
-		if strings.TrimSpace(line) == "provider_order:" {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "provider_order:" || strings.HasPrefix(trimmed, "provider_order:") {
+			// Normalize inline "provider_order: []" to block form
+			if trimmed != "provider_order:" {
+				lines[i] = "provider_order:"
+			}
 			j := i + 1
 			for j < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[j]), "- ") {
 				j++
@@ -301,7 +306,12 @@ func upsertProviderBlock(lines []string, name, apiKey, model string) []string {
 	}
 	// Insert at end of providers section
 	for i, line := range lines {
-		if strings.TrimSpace(line) == "providers:" {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "providers:" || strings.HasPrefix(trimmed, "providers:") {
+			// Normalize inline "providers: {}" to block form
+			if trimmed != "providers:" {
+				lines[i] = "providers:"
+			}
 			j := i + 1
 			for j < len(lines) {
 				l := lines[j]

@@ -23,6 +23,15 @@ import (
 //go:embed prompt.txt
 var defaultPrompt string
 
+//go:embed config.default.yaml
+var defaultConfig string
+
+//go:embed shell/guard.bash
+var shellBash string
+
+//go:embed shell/guard.zsh
+var shellZsh string
+
 var version = "dev"
 
 const (
@@ -277,6 +286,11 @@ func main() {
 		return
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "setup" {
+		runSetup()
+		return
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "help" {
 		runHelp()
 		return
@@ -307,6 +321,11 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+		os.Exit(0) // fail open
+	}
+
+	if len(cfg.ProviderOrder) == 0 {
+		fmt.Fprintln(os.Stderr, "guard-sh: no providers configured — run \"guard-sh provider add\" to add one")
 		os.Exit(0) // fail open
 	}
 

@@ -45,6 +45,8 @@ Commands in your *whitelist* skip the LLM entirely.
   :CUSTOM_ID: installation
   :END:
 
+** From source
+
 #+begin_src bash
 git clone https://github.com/berdanakyurek/guard-sh.git
 cd guard-sh
@@ -56,6 +58,17 @@ This will:
 - Copy the default config to =~/.config/guard-sh/config.yaml=
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
 - Add shell integration to your =.bashrc= or =.zshrc=
+
+** From binary
+
+Download the binary for your platform from the [[https://github.com/berdanakyurek/guard-sh/releases][releases page]], place it in =~/.local/bin/=, then run:
+
+#+begin_src bash
+chmod +x ~/.local/bin/guard-sh
+guard-sh setup
+#+end_src
+
+This will create the config dir, write the shell integration scripts, and add them to your =.bashrc= / =.zshrc=.
 
 ** Install without shell integration
 
@@ -256,6 +269,22 @@ If a provider fails, guard-sh moves on to the next and shows why:
   openai      ✗ HTTP 429: Rate limit exceeded (234ms), trying next
   gemini      ✓ ok (401ms)
 #+end_example
+
+** Setup
+
+#+begin_src bash
+guard-sh setup
+#+end_src
+
+Creates =~/.config/guard-sh/= with the default config and prompt, writes shell integration scripts, and adds them to your =.bashrc= / =.zshrc=. Existing files are not overwritten. This is the only step needed after downloading a pre-built binary.
+
+** Version
+
+#+begin_src bash
+guard-sh version
+#+end_src
+
+Prints the current version (e.g. ~v0.1.0~).
 
 * Providers
   :PROPERTIES:

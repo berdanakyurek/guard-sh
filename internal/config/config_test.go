@@ -64,9 +64,12 @@ func TestLoad_MissingFile(t *testing.T) {
 
 func TestLoad_EmptyProviderOrder(t *testing.T) {
 	writeConfig(t, "provider_order: []\n")
-	_, err := Load()
-	if err == nil {
-		t.Error("expected error for empty provider_order, got nil")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error for empty provider_order: %v", err)
+	}
+	if len(cfg.ProviderOrder) != 0 {
+		t.Errorf("expected empty provider_order, got %v", cfg.ProviderOrder)
 	}
 }
 
