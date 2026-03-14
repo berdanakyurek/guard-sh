@@ -41,7 +41,8 @@ func runHelp() {
 	// Provider
 	fmt.Printf("  %s\n", b("provider"))
 	fmt.Printf("  %s %s\n", c("guard-sh provider add"), d("interactively add a provider (select model, enter API key)"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh provider remove"), d("interactively remove a configured provider"))
+	fmt.Printf("  %s %s\n", c("guard-sh provider remove"), d("interactively remove a configured provider"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh provider order"), d("interactively reorder providers with arrow keys"))
 
 	// Cache
 	fmt.Printf("  %s\n", b("cache"))

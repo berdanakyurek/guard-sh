@@ -176,6 +176,42 @@ func UpdateWhitelist(whitelist []string) error {
 	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0600)
 }
 
+func UpdateProviderOrder(order []string) error {
+	path := filepath.Join(Dir(), "config.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", path)
+	}
+	lines := strings.Split(string(data), "\n")
+
+	start := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "provider_order:" {
+			start = i
+			break
+		}
+	}
+	if start == -1 {
+		return fmt.Errorf("provider_order not found in config")
+	}
+
+	end := start + 1
+	for end < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[end]), "- ") {
+		end++
+	}
+
+	newItems := make([]string, len(order))
+	for i, name := range order {
+		newItems[i] = "  - " + name
+	}
+
+	result := make([]string, 0, len(lines))
+	result = append(result, lines[:start+1]...)
+	result = append(result, newItems...)
+	result = append(result, lines[end:]...)
+	return os.WriteFile(path, []byte(strings.Join(result, "\n")), 0600)
+}
+
 func AddProvider(name, apiKey, model string) error {
 	path := filepath.Join(Dir(), "config.yaml")
 	data, err := os.ReadFile(path)

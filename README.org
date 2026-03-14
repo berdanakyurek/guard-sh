@@ -265,11 +265,14 @@ If a provider fails, guard-sh moves on to the next and shows why:
 #+begin_src bash
 guard-sh provider add      # interactively add a provider
 guard-sh provider remove   # interactively remove a provider
+guard-sh provider order    # interactively reorder providers
 #+end_src
 
 ~provider add~ walks you through selecting a provider, picking a model, and entering an API key. The provider is saved to your config and added to ~provider_order~ automatically.
 
 ~provider remove~ lists your configured providers and removes the one you select.
+
+~provider order~ opens an interactive list. Use arrow keys to navigate, =Enter= to grab a provider, arrow keys to move it, =Enter= again to place it. =s= saves and exits, =q= exits without saving.
 
 * Whitelist
   :PROPERTIES:

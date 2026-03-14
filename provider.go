@@ -13,11 +13,12 @@ import (
 	"time"
 
 	"github.com/Berdan/guard-sh/internal/config"
+	"golang.org/x/term"
 )
 
 func runProvider(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh provider [add|remove]\n")
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh provider [add|remove|order]\n")
 		os.Exit(2)
 	}
 	switch args[0] {
@@ -25,9 +26,137 @@ func runProvider(args []string) {
 		runProviderAdd()
 	case "remove":
 		runProviderRemove()
+	case "order":
+		runProviderOrder()
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh provider [add|remove]\n")
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh provider [add|remove|order]\n")
 		os.Exit(2)
+	}
+}
+
+func runProviderOrder() {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+		os.Exit(1)
+	}
+	if len(cfg.ProviderOrder) < 2 {
+		fmt.Fprintln(os.Stderr, "guard-sh: need at least 2 providers to reorder")
+		os.Exit(1)
+	}
+
+	order := make([]string, len(cfg.ProviderOrder))
+	copy(order, cfg.ProviderOrder)
+
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+		os.Exit(1)
+	}
+
+	cursor := 0
+	grabbed := false
+	saved := false
+	linesDrawn := 0
+
+	restore := func() {
+		fmt.Printf("\033[?25h") // show cursor
+		term.Restore(int(os.Stdin.Fd()), oldState)
+	}
+	defer func() {
+		restore()
+		if saved {
+			fmt.Printf("\n  %s● order saved%s\n\n", green, reset)
+		}
+	}()
+
+	render := func() {
+		if linesDrawn > 0 {
+			fmt.Printf("\033[%dA", linesDrawn)
+		}
+		linesDrawn = 0
+
+		fmt.Printf("\033[?25l") // hide cursor
+
+		line := func(format string, args ...any) {
+			fmt.Printf("\r\033[2K"+format+"\r\n", args...)
+			linesDrawn++
+		}
+
+		line("  %sprovider order%s", bold, reset)
+		line("")
+		for i, name := range order {
+			p := cfg.Providers[name]
+			model := ""
+			if p != nil {
+				model = p.Model
+			}
+			if model == "" {
+				model = config.DefaultModel(name)
+			}
+			switch {
+			case i == cursor && grabbed:
+				line("  %s●%s %s%-10s%s %s%s%s", green, reset, cyan, name, reset, dim, model, reset)
+			case i == cursor:
+				line("  %s›%s %s%-10s%s %s%s%s", cyan, reset, cyan, name, reset, dim, model, reset)
+			default:
+				line("    %s%-10s%s %s%s%s", cyan, name, reset, dim, model, reset)
+			}
+		}
+		line("")
+		if grabbed {
+			line("  %s↑↓ move   enter: place%s", dim, reset)
+		} else {
+			line("  %s↑↓ navigate   enter: grab   s: save & quit   q: quit without saving%s", dim, reset)
+		}
+	}
+
+	render()
+
+	buf := make([]byte, 3)
+	for {
+		n, _ := os.Stdin.Read(buf)
+		if n == 0 {
+			continue
+		}
+
+		switch {
+		case n == 3 && buf[0] == '\x1b' && buf[1] == '[' && buf[2] == 'A': // up arrow
+			if grabbed {
+				if cursor > 0 {
+					order[cursor], order[cursor-1] = order[cursor-1], order[cursor]
+					cursor--
+				}
+			} else {
+				if cursor > 0 {
+					cursor--
+				}
+			}
+		case n == 3 && buf[0] == '\x1b' && buf[1] == '[' && buf[2] == 'B': // down arrow
+			if grabbed {
+				if cursor < len(order)-1 {
+					order[cursor], order[cursor+1] = order[cursor+1], order[cursor]
+					cursor++
+				}
+			} else {
+				if cursor < len(order)-1 {
+					cursor++
+				}
+			}
+		case n == 1 && (buf[0] == '\r' || buf[0] == '\n'): // enter
+			grabbed = !grabbed
+		case n == 1 && buf[0] == 's' && !grabbed:
+			restore()
+			if err := config.UpdateProviderOrder(order); err != nil {
+				fmt.Fprintf(os.Stderr, "\r\nguard-sh: %v\r\n", err)
+				os.Exit(1)
+			}
+			saved = true
+			return
+		case n == 1 && buf[0] == 'q' && !grabbed:
+			return
+		}
+		render()
 	}
 }
 
