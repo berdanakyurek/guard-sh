@@ -133,6 +133,23 @@ guard-sh off --global   # don't auto-enable in new terminals
 
 ~off --global~ does not remove guard-sh from your shell — it only stops it from auto-enabling. You can still use ~guard-sh on~ in any terminal at any time.
 
+** Healthcheck
+
+#+begin_src bash
+guard-sh healthcheck
+#+end_src
+
+Checks all configured providers — validates API keys and model names without spending any tokens.
+
+#+begin_example
+  guard-sh healthcheck
+
+  openai      gpt-4o-mini                         ● ok
+  gemini      gemini-3.1-flash-lite-preview        ● ok
+  deepseek    deepseek-chat                        ✗ HTTP 401: Authentication Fails
+  claude      claude-haiku-4-5-20251001            ● ok
+#+end_example
+
 ** Status
 
 #+begin_src bash
