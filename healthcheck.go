@@ -75,8 +75,6 @@ func runHealthcheck() {
 	fmt.Println()
 	if allOK {
 		fmt.Printf("  %sall providers healthy%s\n\n", green, reset)
-	} else {
-		fmt.Printf("  %ssome providers failed — run \"guard-sh status\" for config details%s\n\n", red, reset)
 	}
 }
 

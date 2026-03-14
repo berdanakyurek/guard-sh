@@ -6,6 +6,7 @@ provider_order:
   - openai
   - gemini
   - deepseek
+  - claude
 
 providers:
   gemini:
