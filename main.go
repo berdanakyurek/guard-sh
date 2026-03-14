@@ -23,6 +23,8 @@ import (
 //go:embed prompt.txt
 var defaultPrompt string
 
+var version = "dev"
+
 const (
 	reset  = "\033[0m"
 	bold   = "\033[1m"
@@ -277,6 +279,11 @@ func main() {
 
 	if len(os.Args) >= 2 && os.Args[1] == "help" {
 		runHelp()
+		return
+	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "version" {
+		fmt.Println(version)
 		return
 	}
 

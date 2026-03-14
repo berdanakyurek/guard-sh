@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binaries
+        run: |
+          VERSION=${{ github.ref_name }}
+          LDFLAGS="-X main.version=${VERSION}"
+
+          GOOS=linux  GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o guard-sh-linux-amd64  .
+          GOOS=linux  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o guard-sh-linux-arm64  .
+          GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o guard-sh-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o guard-sh-darwin-arm64 .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            guard-sh-linux-amd64
+            guard-sh-linux-arm64
+            guard-sh-darwin-amd64
+            guard-sh-darwin-arm64

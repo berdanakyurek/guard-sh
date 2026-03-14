@@ -54,4 +54,8 @@ func runHelp() {
 	// Config
 	fmt.Printf("  %s\n", b("config"))
 	fmt.Printf("  %s\n\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout"))
+
+	// Version
+	fmt.Printf("  %s\n", b("version"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh version"), d("print version"))
 }
