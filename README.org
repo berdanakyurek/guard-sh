@@ -117,6 +117,14 @@ The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust w
 
 * Usage
 
+** Help
+
+#+begin_src bash
+guard-sh help
+#+end_src
+
+Lists all commands and their usage.
+
 ** Session control
 
 #+begin_src bash

@@ -233,6 +233,11 @@ func main() {
 		return
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "help" {
+		runHelp()
+		return
+	}
+
 	if len(os.Args) < 3 || os.Args[1] != "check" {
 		fmt.Fprintln(os.Stderr, "Usage: guard-sh check <command>")
 		os.Exit(2)
