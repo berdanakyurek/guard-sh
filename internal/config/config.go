@@ -342,7 +342,7 @@ func deleteProviderBlock(lines []string, name string) []string {
 func DefaultModel(provider string) string {
 	switch provider {
 	case "gemini":
-		return "gemini-broken-model"
+		return "gemini-3.1-flash-lite-preview"
 	case "claude":
 		return "claude-haiku-4-5-20251001"
 	case "openai":
