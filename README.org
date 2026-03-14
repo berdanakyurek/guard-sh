@@ -128,6 +128,16 @@ The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust w
   :CUSTOM_ID: usage
   :END:
 
+guard-sh is designed to run as a shell integration — it intercepts every command you type automatically. Once installed, you don't need to invoke it manually.
+
+You can test it directly with:
+
+#+begin_src bash
+guard-sh check "rm -rf /"
+#+end_src
+
+This is useful for testing your configuration, but normal usage happens transparently through the shell hook.
+
 ** Help
 
 #+begin_src bash
@@ -185,7 +195,7 @@ Checks all configured providers without spending any tokens. Reports:
 guard-sh status
 #+end_src
 
-Shows the current session and global on/off state, the active provider list with models, and the whitelist (up to 10 entries).
+Shows session and global state, prompt path, timeout, cache stats, active providers, and whitelist.
 
 #+begin_example
   guard-sh
@@ -193,11 +203,17 @@ Shows the current session and global on/off state, the active provider list with
   session   ● on
   global    ● on
   config    ~/.config/guard-sh/config.yaml
+  prompt    ~/.config/guard-sh/prompt.txt
+  timeout   10s
   cache     ● on
             1000 max entries
+            42 entries, 8.3 KB
 
   providers
-  1  gemini    gemini-3.1-flash-lite-preview
+  1  openai    gpt-4o-mini
+  2  gemini    gemini-3.1-flash-lite-preview
+  3  deepseek  deepseek-chat
+  4  claude    claude-haiku-4-5-20251001
 
   whitelist
   1  ls
@@ -211,6 +227,34 @@ Shows the current session and global on/off state, the active provider list with
   9  history
   10  which
   +3 more (to see all, run "guard-sh whitelist")
+#+end_example
+
+** Debug mode
+
+#+begin_src bash
+guard-sh check "<command>" --debug
+#+end_src
+
+Prints a step-by-step trace to stderr: whitelist result, cache hit/miss, which provider was tried, response time, and the final LLM response.
+
+#+begin_example
+  command   "rm -rf /"
+
+  whitelist ○ miss
+  cache     ○ miss
+
+  providers
+  openai      ✓ ok (1315ms)
+
+  result    "This command will recursively delete everything from root."
+#+end_example
+
+If a provider fails, guard-sh moves on to the next and shows why:
+
+#+begin_example
+  providers
+  openai      ✗ HTTP 429: Rate limit exceeded (234ms), trying next
+  gemini      ✓ ok (401ms)
 #+end_example
 
 * Providers

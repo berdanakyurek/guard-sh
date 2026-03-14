@@ -22,7 +22,11 @@ func runHelp() {
 
 	// Status
 	fmt.Printf("  %s\n", b("status"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, active providers, and whitelist"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, cache stats, providers, whitelist"))
+
+	// Debug
+	fmt.Printf("  %s\n", b("debug"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh check \"<command>\" --debug"), d("trace whitelist, cache, provider attempts, and LLM response"))
 
 	// Healthcheck
 	fmt.Printf("  %s\n", b("healthcheck"))

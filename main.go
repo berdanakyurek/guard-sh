@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -289,6 +290,13 @@ func main() {
 		os.Exit(0)
 	}
 
+	var debugOut io.Writer
+	for _, arg := range os.Args[3:] {
+		if arg == "--debug" {
+			debugOut = os.Stderr
+		}
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
@@ -328,7 +336,7 @@ func main() {
 	if cfg.CacheEnabled == nil || *cfg.CacheEnabled {
 		cacheMaxSize = cfg.CacheMaxSize
 	}
-	g := guard.New(llm.NewMulti(names, providers), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize)
+	g := guard.New(llm.NewMulti(names, providers, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {
