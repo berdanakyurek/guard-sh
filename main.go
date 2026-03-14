@@ -239,7 +239,7 @@ func main() {
 	}
 
 	if len(os.Args) < 3 || os.Args[1] != "check" {
-		fmt.Fprintln(os.Stderr, "Usage: guard-sh check <command>")
+		fmt.Fprintln(os.Stderr, "Unknown Command: Run \"guard-sh help\" to see available commands.")
 		os.Exit(2)
 	}
 
