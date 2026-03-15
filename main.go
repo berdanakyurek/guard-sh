@@ -365,7 +365,15 @@ func main() {
 	if cfg.CacheEnabled == nil || *cfg.CacheEnabled {
 		cacheMaxSize = cfg.CacheMaxSize
 	}
-	g := guard.New(llm.NewMulti(names, providers, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
+	providerPrompts := make(map[string]string)
+	for _, name := range names {
+		path := config.Dir() + "/prompt_" + name + ".txt"
+		if data, err := os.ReadFile(path); err == nil {
+			providerPrompts[name] = string(data)
+		}
+	}
+
+	g := guard.New(llm.NewMulti(names, providers, providerPrompts, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {

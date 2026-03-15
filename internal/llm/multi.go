@@ -22,21 +22,26 @@ const (
 type Multi struct {
 	providers []guard.Provider
 	names     []string
+	prompts   map[string]string // per-provider prompt overrides
 	debug     io.Writer
 }
 
-func NewMulti(names []string, providers []guard.Provider, debug io.Writer) *Multi {
-	return &Multi{names: names, providers: providers, debug: debug}
+func NewMulti(names []string, providers []guard.Provider, prompts map[string]string, debug io.Writer) *Multi {
+	return &Multi{names: names, providers: providers, prompts: prompts, debug: debug}
 }
 
 func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string, error) {
 	for i, p := range m.providers {
 		name := m.names[i]
+		prompt := systemPrompt
+		if override, ok := m.prompts[name]; ok {
+			prompt = override
+		}
 		if m.debug != nil {
 			fmt.Fprintf(m.debug, "  %s%-10s%s", dbgCyan, name, dbgReset)
 		}
 		start := time.Now()
-		result, err := p.Query(ctx, systemPrompt, command)
+		result, err := p.Query(ctx, prompt, command)
 		elapsed := time.Since(start).Milliseconds()
 		if err == nil {
 			if m.debug != nil {

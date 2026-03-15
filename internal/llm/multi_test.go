@@ -22,7 +22,7 @@ func (m *mockProvider) Query(_ context.Context, _, _ string) (string, error) {
 func TestMulti_FirstProviderSucceeds(t *testing.T) {
 	p1 := &mockProvider{response: "OK"}
 	p2 := &mockProvider{response: "fallback"}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil)
 
 	result, err := m.Query(context.Background(), "", "ls")
 	if err != nil {
@@ -42,7 +42,7 @@ func TestMulti_FirstProviderSucceeds(t *testing.T) {
 func TestMulti_FallbackOnError(t *testing.T) {
 	p1 := &mockProvider{err: errors.New("rate limit")}
 	p2 := &mockProvider{response: "Deletes everything"}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil)
 
 	result, err := m.Query(context.Background(), "", "rm -rf /")
 	if err != nil {
@@ -62,7 +62,7 @@ func TestMulti_FallbackOnError(t *testing.T) {
 func TestMulti_AllFail(t *testing.T) {
 	p1 := &mockProvider{err: errors.New("error 1")}
 	p2 := &mockProvider{err: errors.New("error 2")}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil)
 
 	_, err := m.Query(context.Background(), "", "rm -rf /")
 	if err == nil {
@@ -74,7 +74,7 @@ func TestMulti_AllFail(t *testing.T) {
 }
 
 func TestMulti_EmptyProviders(t *testing.T) {
-	m := NewMulti(nil, nil, nil)
+	m := NewMulti(nil, nil, nil, nil)
 	_, err := m.Query(context.Background(), "", "ls")
 	if err == nil {
 		t.Error("expected error with no providers, got nil")

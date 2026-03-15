@@ -53,7 +53,9 @@ func runHelp() {
 
 	// Config
 	fmt.Printf("  %s\n", b("config"))
-	fmt.Printf("  %s\n\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout"))
+	fmt.Printf("  %s\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout"))
+	fmt.Printf("  %s\n", d("~/.config/guard-sh/prompt.txt — default system prompt (edit without rebuild)"))
+	fmt.Printf("  %s\n\n", d("~/.config/guard-sh/prompt_<provider>.txt — per-provider prompt override"))
 
 	// Setup
 	fmt.Printf("  %s\n", b("setup"))

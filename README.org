@@ -141,6 +141,18 @@ cache_max_size: 1000
 
 The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
 
+** Provider-specific prompts
+
+To use a different prompt for a specific provider, create =prompt_PROVIDERNAME.txt= in the same directory:
+
+#+begin_src bash
+~/.config/guard-sh/prompt.txt           # default, used by all providers
+~/.config/guard-sh/prompt_ollama.txt    # used only when ollama is queried
+~/.config/guard-sh/prompt_gemini.txt    # used only when gemini is queried
+#+end_src
+
+If a provider-specific file exists, it takes precedence over =prompt.txt= for that provider.
+
 * Usage
   :PROPERTIES:
   :CUSTOM_ID: usage
@@ -188,7 +200,7 @@ guard-sh healthcheck
 
 Checks all configured providers without spending any tokens. Reports:
 
-- API key and model validity for each provider
+- API key and model validity for cloud providers; server connectivity for Ollama
 - Response latency per provider
 - Shell integration status (~.bashrc~ / ~.zshrc~)
 - Config errors (e.g. unknown provider names in ~provider_order~)
@@ -197,9 +209,10 @@ Checks all configured providers without spending any tokens. Reports:
   guard-sh healthcheck
 
   providers
-  openai      gpt-4o-mini                          ● ok  (759ms)
+  ollama      llama3.2                             ● ok  (12ms)
   gemini      gemini-3.1-flash-lite-preview        ● ok  (184ms)
   deepseek    deepseek-chat                        ✗ HTTP 401: Authentication Fails
+  openai      gpt-4o-mini                          ● ok  (759ms)
   claude      claude-haiku-4-5-20251001            ● ok  (510ms)
 
   shell
@@ -228,10 +241,11 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
             42 entries, 8.3 KB
 
   providers
-  1  openai    gpt-4o-mini
-  2  gemini    gemini-3.1-flash-lite-preview
+  1  gemini    gemini-3.1-flash-lite-preview
+  2  ollama    llama3.2
   3  deepseek  deepseek-chat
-  4  claude    claude-haiku-4-5-20251001
+  4  openai    gpt-4o-mini
+  5  claude    claude-haiku-4-5-20251001
 
   whitelist
   1  ls
