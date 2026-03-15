@@ -22,15 +22,16 @@ redact_patterns:
   - '(?i)--password\s+\S+'
   - 'AKIA[0-9A-Z]{16}'
 
-# Shannon entropy threshold (bits/char) for entropy-based redaction.
-# Tokens with entropy above this value are replaced with [REDACTED].
-# Typical English text: ~3.5 bits/char. Random secrets: typically >4.5.
-# Per-provider entropy redaction can be toggled with: guard-sh redact entropy on/off
-entropy_threshold: 4.5
-
-# Minimum token length for entropy-based redaction.
-# Tokens shorter than this are never redacted (reduces false positives).
-entropy_min_length: 20
+# Entropy-based redaction is configured per-provider under the providers block.
+# Enable it with: guard-sh redact entropy on
+# Or add manually to a provider:
+#
+#   providers:
+#     claude:
+#       redact_entropy:
+#         enabled: true
+#         threshold: 4.5   # bits/char — typical English ~3.5, secrets typically >4.5
+#         min_length: 20   # ignore tokens shorter than this (reduces false positives)
 
 # Commands that are always considered safe — API is never called for these.
 # Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).

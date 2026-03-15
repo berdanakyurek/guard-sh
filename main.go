@@ -125,31 +125,20 @@ func runStatus(args []string) {
 		}
 		fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, cyan, name, reset)
 		fmt.Printf("  %s   %smodel%s                %s%s%s\n", dim+"  "+reset, dim, reset, dim, model, reset)
-		entropyBadge := ""
+		entropyBadge := dim + "○ off" + reset
+		entropyDetail := ""
 		if p.EntropyRedactionEnabled() {
 			entropyBadge = green + "● on" + reset
-		} else {
-			entropyBadge = dim + "○ off" + reset
+			entropyDetail = fmt.Sprintf("%s (threshold %.1f, min length %d)%s", dim, p.GetEntropyThreshold(), p.GetEntropyMinLength(), reset)
 		}
 		fmt.Printf("  %s   %spattern based redaction%s  %s\n", dim+"  "+reset, dim, reset, redactBadge)
-		fmt.Printf("  %s   %sentropy based redaction%s  %s\n\n", dim+"  "+reset, dim, reset, entropyBadge)
+		fmt.Printf("  %s   %sentropy based redaction%s  %s%s\n\n", dim+"  "+reset, dim, reset, entropyBadge, entropyDetail)
 	}
 
-	fmt.Printf("\n  %sredaction%s\n", bold, reset)
 	if len(cfg.RedactPatterns) > 0 {
+		fmt.Printf("\n  %sredaction%s\n", bold, reset)
 		fmt.Printf("  %s  %s%d patterns active%s\n", label("patterns"), dim, len(cfg.RedactPatterns), reset)
-	} else {
-		fmt.Printf("  %s  %snone%s\n", label("patterns"), dim, reset)
 	}
-	entropyThreshold := cfg.EntropyThreshold
-	if entropyThreshold <= 0 {
-		entropyThreshold = 4.5
-	}
-	entropyMinLen := cfg.EntropyMinLength
-	if entropyMinLen <= 0 {
-		entropyMinLen = 20
-	}
-	fmt.Printf("  %s  %sthreshold %.1f, min length %d%s\n", label("entropy "), dim, entropyThreshold, entropyMinLen, reset)
 
 	if len(cfg.CommandWhitelist) > 0 {
 		fmt.Printf("\n  %swhitelist%s\n", bold, reset)
@@ -421,21 +410,15 @@ func main() {
 		redactEnabled[name] = cfg.Providers[name].RedactionEnabled()
 	}
 
-	entropyThreshold := cfg.EntropyThreshold
-	if entropyThreshold <= 0 {
-		entropyThreshold = 4.5
-	}
-	entropyMinLen := cfg.EntropyMinLength
-	if entropyMinLen <= 0 {
-		entropyMinLen = 20
-	}
-	entropyRedactor := redact.NewEntropyRedactor(entropyThreshold, entropyMinLen)
-	entropyRedactEnabled := make(map[string]bool, len(names))
+	entropyRedactors := make(map[string]*redact.EntropyRedactor, len(names))
 	for _, name := range names {
-		entropyRedactEnabled[name] = cfg.Providers[name].EntropyRedactionEnabled()
+		p := cfg.Providers[name]
+		if p.EntropyRedactionEnabled() {
+			entropyRedactors[name] = redact.NewEntropyRedactor(p.GetEntropyThreshold(), p.GetEntropyMinLength())
+		}
 	}
 
-	g := guard.New(llm.NewMulti(names, providers, providerPrompts, redactor, redactEnabled, entropyRedactor, entropyRedactEnabled, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
+	g := guard.New(llm.NewMulti(names, providers, providerPrompts, redactor, redactEnabled, entropyRedactors, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {
