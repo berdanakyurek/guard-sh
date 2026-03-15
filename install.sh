@@ -43,10 +43,14 @@ echo ""
 # --- Config ---
 mkdir -p "$CONFIG_DIR"
 
-cp "$INSTALL_DIR/config.default.yaml" "$CONFIG_FILE"
-chmod 600 "$CONFIG_FILE"
-echo "Config created: $CONFIG_FILE"
-echo "Edit it and set your api_key before using guard-sh."
+if [[ -f "$CONFIG_FILE" ]]; then
+    echo "Config already exists, skipping: $CONFIG_FILE"
+else
+    cp "$INSTALL_DIR/config.default.yaml" "$CONFIG_FILE"
+    chmod 600 "$CONFIG_FILE"
+    echo "Config created: $CONFIG_FILE"
+    echo "Edit it and set your api_key before using guard-sh."
+fi
 
 cp "$INSTALL_DIR/prompt.txt" "$CONFIG_DIR/prompt.txt"
 echo "Prompt copied: $CONFIG_DIR/prompt.txt (edit to customize)"
@@ -72,16 +76,12 @@ if [[ $WITH_SHELL -eq 1 ]]; then
             ;;
     esac
 
-    SOURCE_LINE="source \"$SHELL_SCRIPT\""
+    DEST_SCRIPT="$CONFIG_DIR/guard.$SHELL_NAME"
+    cp "$SHELL_SCRIPT" "$DEST_SCRIPT"
+    SOURCE_LINE="source \"$DEST_SCRIPT\""
     ON_LINE="guard-sh on"
-    if grep -qF "$SOURCE_LINE" "$RC_FILE" 2>/dev/null; then
-        if ! grep -qF "$ON_LINE" "$RC_FILE" 2>/dev/null; then
-            echo "$ON_LINE" >> "$RC_FILE"
-            echo "Shell integration updated in $RC_FILE (added guard-sh on)"
-            echo "Restart your shell or run: source $RC_FILE"
-        else
-            echo "Shell integration already present in $RC_FILE"
-        fi
+    if grep -q "guard-sh" "$RC_FILE" 2>/dev/null; then
+        echo "Shell integration already present in $RC_FILE"
     else
         printf '\n# guard-sh\n%s\n%s\n' "$SOURCE_LINE" "$ON_LINE" >> "$RC_FILE"
         echo "Shell integration added to $RC_FILE"

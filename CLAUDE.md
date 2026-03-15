@@ -7,8 +7,44 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 At the start of every session, read `.claude-identity` from the repo root if it exists. It contains:
 - `DEVELOPER_ID` — your identity (e.g. `claude-developer-1`); use this when referring to yourself
 - `BRANCH_PREFIX` — prefix for all branches you create (e.g. `claude-1/feature-name`)
+- `GITHUB_APP_ID` — GitHub App ID used for authenticated pushes
+- `GITHUB_APP_CLIENT_ID` — GitHub App Client ID
+- `GITHUB_APP_CLIENT_SECRET` — GitHub App Client Secret
+- `GITHUB_APP_PRIVATE_KEY_PATH` — path to the App's RSA private key (relative to repo root, gitignored)
+- `GITHUB_REPO` — target repo in `owner/repo` format
 
 If `.claude-identity` does not exist, you are working in the base repo as the human owner.
+
+## Pushing with GitHub App Authentication
+
+Never use the human owner's git credentials. Always authenticate as the GitHub App defined in `.claude-identity`.
+
+Steps to push:
+
+```bash
+# 1. Source identity
+source .claude-identity
+
+# 2. Generate JWT (valid 10 min)
+PRIVATE_KEY=$(cat "$GITHUB_APP_PRIVATE_KEY_PATH")
+NOW=$(date +%s)
+EXP=$((NOW + 600))
+HEADER=$(echo -n '{"alg":"RS256","typ":"JWT"}' | openssl base64 -e | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+PAYLOAD=$(echo -n "{\"iat\":$NOW,\"exp\":$EXP,\"iss\":$GITHUB_APP_ID}" | openssl base64 -e | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+SIG=$(echo -n "${HEADER}.${PAYLOAD}" | openssl dgst -sha256 -sign "$GITHUB_APP_PRIVATE_KEY_PATH" | openssl base64 -e | tr -d '=' | tr '/+' '_-' | tr -d '\n')
+JWT="${HEADER}.${PAYLOAD}.${SIG}"
+
+# 3. Get installation ID
+INSTALLATION_ID=$(curl -s -H "Authorization: Bearer $JWT" -H "Accept: application/vnd.github+json" \
+  https://api.github.com/app/installations | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+
+# 4. Get installation access token
+TOKEN=$(curl -s -X POST -H "Authorization: Bearer $JWT" -H "Accept: application/vnd.github+json" \
+  https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# 5. Push using token
+git push https://x-access-token:${TOKEN}@github.com/${GITHUB_REPO}.git HEAD
+```
 
 ## What This Project Does
 

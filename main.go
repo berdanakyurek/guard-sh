@@ -108,6 +108,7 @@ func runStatus(args []string) {
 	}
 
 	fmt.Printf("\n  %sproviders%s\n", bold, reset)
+	globalRedaction := cfg.Redaction
 	for i, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
 		model := ""
@@ -117,20 +118,31 @@ func runStatus(args []string) {
 		if model == "" {
 			model = config.DefaultModel(name)
 		}
-		redactBadge := ""
-		if p.RedactionEnabled() {
-			redactBadge = green + "● on" + reset
-		} else {
-			redactBadge = dim + "○ off" + reset
+
+		effectivePattern := p.EffectivePatternRedaction(globalRedaction.PatternBased)
+		patternBadge := dim + "○ off" + reset
+		if effectivePattern.IsEnabled() {
+			patternBadge = green + "● on" + reset
 		}
+
+		effectiveEntropy := p.EffectiveEntropyRedaction(globalRedaction.ShannonEntropyBased)
+		entropyBadge := dim + "○ off" + reset
+		entropyDetail := ""
+		if effectiveEntropy.IsEnabled() {
+			entropyBadge = green + "● on" + reset
+			entropyDetail = fmt.Sprintf("%s (threshold %.1f, min length %d)%s", dim, effectiveEntropy.GetThreshold(), effectiveEntropy.GetMinLength(), reset)
+		}
+
 		fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, cyan, name, reset)
 		fmt.Printf("  %s   %smodel%s                %s%s%s\n", dim+"  "+reset, dim, reset, dim, model, reset)
-		fmt.Printf("  %s   %spattern based redaction%s  %s\n\n", dim+"  "+reset, dim, reset, redactBadge)
+		fmt.Printf("  %s   %spattern redaction%s     %s\n", dim+"  "+reset, dim, reset, patternBadge)
+		fmt.Printf("  %s   %sentropy redaction%s     %s%s\n\n", dim+"  "+reset, dim, reset, entropyBadge, entropyDetail)
 	}
 
-	if len(cfg.RedactPatterns) > 0 {
+	globalPatterns := globalRedaction.PatternBased.GetPatterns()
+	if len(globalPatterns) > 0 {
 		fmt.Printf("\n  %sredaction%s\n", bold, reset)
-		fmt.Printf("  %s  %s%d patterns active%s\n", label("patterns"), dim, len(cfg.RedactPatterns), reset)
+		fmt.Printf("  %s  %s%d global patterns%s\n", label("patterns"), dim, len(globalPatterns), reset)
 	}
 
 	if len(cfg.CommandWhitelist) > 0 {
@@ -388,22 +400,33 @@ func main() {
 		}
 	}
 
-	var redactor *redact.Redactor
-	if len(cfg.RedactPatterns) > 0 {
-		r, rerr := redact.New(cfg.RedactPatterns)
-		if rerr != nil {
-			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", rerr)
-			os.Exit(0) // fail open
-		}
-		redactor = r
-	}
+	globalRedact := cfg.Redaction
+	patternRedactors := make(map[string]*redact.Redactor, len(names))
+	entropyRedactors := make(map[string]*redact.EntropyRedactor, len(names))
 
-	redactEnabled := make(map[string]bool, len(names))
 	for _, name := range names {
-		redactEnabled[name] = cfg.Providers[name].RedactionEnabled()
+		p := cfg.Providers[name]
+
+		effectivePattern := p.EffectivePatternRedaction(globalRedact.PatternBased)
+		if effectivePattern.IsEnabled() {
+			patterns := effectivePattern.GetPatterns()
+			if len(patterns) > 0 {
+				r, rerr := redact.New(patterns)
+				if rerr != nil {
+					fmt.Fprintf(os.Stderr, "guard-sh: %v\n", rerr)
+					os.Exit(0) // fail open
+				}
+				patternRedactors[name] = r
+			}
+		}
+
+		effectiveEntropy := p.EffectiveEntropyRedaction(globalRedact.ShannonEntropyBased)
+		if effectiveEntropy.IsEnabled() {
+			entropyRedactors[name] = redact.NewEntropyRedactor(effectiveEntropy.GetThreshold(), effectiveEntropy.GetMinLength())
+		}
 	}
 
-	g := guard.New(llm.NewMulti(names, providers, providerPrompts, redactor, redactEnabled, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
+	g := guard.New(llm.NewMulti(names, providers, providerPrompts, patternRedactors, entropyRedactors, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {

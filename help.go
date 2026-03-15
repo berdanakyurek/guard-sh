@@ -47,7 +47,9 @@ func runHelp() {
 	// Redact
 	fmt.Printf("  %s\n", b("redact"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact pattern on"), d("interactively enable pattern-based redaction for a provider"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh redact pattern off"), d("interactively disable pattern-based redaction for a provider"))
+	fmt.Printf("  %s %s\n", c("guard-sh redact pattern off"), d("interactively disable pattern-based redaction for a provider"))
+	fmt.Printf("  %s %s\n", c("guard-sh redact entropy on"), d("interactively enable entropy-based redaction for a provider"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh redact entropy off"), d("interactively disable entropy-based redaction for a provider"))
 
 	// Cache
 	fmt.Printf("  %s\n", b("cache"))
