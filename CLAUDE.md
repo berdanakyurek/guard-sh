@@ -88,6 +88,8 @@ guard-sh whitelist add <cmd>    add a command (LLM never called for it)
 guard-sh whitelist remove <cmd> remove a command from the whitelist
 guard-sh redact pattern on       interactive: enable pattern-based redaction for a provider
 guard-sh redact pattern off      interactive: disable pattern-based redaction for a provider
+guard-sh redact entropy on       interactive: enable Shannon entropy-based redaction for a provider
+guard-sh redact entropy off      interactive: disable Shannon entropy-based redaction for a provider
 guard-sh cache on/off           enable/disable response caching
 guard-sh cache size <n>         set max cached entries
 guard-sh cache clear            delete all cached responses
@@ -105,15 +107,15 @@ shell command typed
   → shell hook (shell/guard.bash or shell/guard.zsh or shell/guard.fish)
   → guard-sh check <command>
   → main.go: prepend "Working directory: <wd>\nCommand: " if send_working_directory is enabled
-  → internal/guard: whitelist check (rawCmd) → cache check → LLM query (with WD prefix)
-  → internal/llm/multi.go: try each provider in order, first success wins
+  → internal/guard: whitelist check (rawCmd) → LLM dispatch (query)
+  → internal/llm/multi.go: per-provider cache check → redaction → provider query, first success wins
   → response printed; shell prompts [Y/n] if not "OK"
 ```
 
 ### Key packages
 
-- **`internal/guard/`** — core logic: whitelist matching, cache lookup, LLM dispatch, command parsing (handles `&&`, `||`, `;`, `|`, subshells, variable assignments)
-- **`internal/llm/multi.go`** — tries providers in `provider_order` config; fails open (allows command) if all fail
+- **`internal/guard/`** — core logic: whitelist matching, LLM dispatch, command parsing (handles `&&`, `||`, `;`, `|`, subshells, variable assignments)
+- **`internal/llm/multi.go`** — per-provider cache check (key: `provider:query`), redaction, provider query in `provider_order`; fails open if all fail
 - **`internal/llm/{claude,gemini,openai,deepseek,ollama}/`** — one file per provider, each makes HTTP POST to its API; all implement the same `Provider` interface. Ollama uses `host` instead of `api_key` and hits a local endpoint (`/api/chat`).
 - **`internal/redact/`** — regex-based redaction; `Redactor.Redact(s)` replaces pattern matches with `[REDACTED]`. Patterns come from `redact_patterns` in config. Applied in `llm.Multi` per-provider before the LLM call.
 - **`internal/cache/`** — LRU cache persisted to `~/.config/guard-sh/cache.json`

@@ -307,6 +307,191 @@ func TestRemoveProvider_Unknown(t *testing.T) {
 	}
 }
 
+func TestIsSendWorkingDirectoryEnabled(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	cases := []struct {
+		cfg  *Config
+		want bool
+	}{
+		{&Config{}, true},                                  // nil pointer → default true
+		{&Config{SendWorkingDirectory: &trueVal}, true},   // explicit true
+		{&Config{SendWorkingDirectory: &falseVal}, false}, // explicit false
+	}
+	for _, c := range cases {
+		got := c.cfg.IsSendWorkingDirectoryEnabled()
+		if got != c.want {
+			t.Errorf("IsSendWorkingDirectoryEnabled() = %v, want %v", got, c.want)
+		}
+	}
+}
+
+func TestEffectivePatternRedaction(t *testing.T) {
+	enabled := true
+	disabled := false
+	global := &PatternRedactionConfig{Enabled: &enabled, Patterns: []string{"pat1"}}
+
+	// nil provider → falls back to global
+	var p *ProviderConfig
+	got := p.EffectivePatternRedaction(global)
+	if got != global {
+		t.Error("nil provider should return global config")
+	}
+
+	// provider with no redaction override → falls back to global
+	p2 := &ProviderConfig{}
+	got2 := p2.EffectivePatternRedaction(global)
+	if got2 != global {
+		t.Error("provider with no redaction should return global config")
+	}
+
+	// provider overrides enabled=false, inherits patterns from global
+	p3 := &ProviderConfig{Redaction: &RedactionConfig{PatternBased: &PatternRedactionConfig{Enabled: &disabled}}}
+	got3 := p3.EffectivePatternRedaction(global)
+	if got3.IsEnabled() {
+		t.Error("expected provider override to disable pattern redaction")
+	}
+	if len(got3.GetPatterns()) == 0 {
+		t.Error("expected patterns inherited from global")
+	}
+
+	// provider overrides patterns, inherits enabled from global
+	p4 := &ProviderConfig{Redaction: &RedactionConfig{PatternBased: &PatternRedactionConfig{Patterns: []string{"pat2", "pat3"}}}}
+	got4 := p4.EffectivePatternRedaction(global)
+	if !got4.IsEnabled() {
+		t.Error("expected enabled inherited from global")
+	}
+	if len(got4.GetPatterns()) != 2 || got4.GetPatterns()[0] != "pat2" {
+		t.Errorf("expected provider patterns, got %v", got4.GetPatterns())
+	}
+}
+
+func TestEffectiveEntropyRedaction(t *testing.T) {
+	enabled := true
+	disabled := false
+	global := &EntropyRedactionConfig{Enabled: &enabled, Threshold: 4.5, MinLength: 20}
+
+	// nil provider → falls back to global
+	var p *ProviderConfig
+	got := p.EffectiveEntropyRedaction(global)
+	if got != global {
+		t.Error("nil provider should return global config")
+	}
+
+	// provider overrides threshold only
+	p2 := &ProviderConfig{Redaction: &RedactionConfig{ShannonEntropyBased: &EntropyRedactionConfig{Threshold: 3.5}}}
+	got2 := p2.EffectiveEntropyRedaction(global)
+	if got2.GetThreshold() != 3.5 {
+		t.Errorf("expected threshold 3.5, got %f", got2.GetThreshold())
+	}
+	if got2.GetMinLength() != 20 {
+		t.Errorf("expected min_length inherited from global (20), got %d", got2.GetMinLength())
+	}
+
+	// provider disables entropy
+	p3 := &ProviderConfig{Redaction: &RedactionConfig{ShannonEntropyBased: &EntropyRedactionConfig{Enabled: &disabled}}}
+	got3 := p3.EffectiveEntropyRedaction(global)
+	if got3.IsEnabled() {
+		t.Error("expected provider override to disable entropy redaction")
+	}
+}
+
+func TestUpdateProviderPatternRedaction(t *testing.T) {
+	writeConfig(t, baseConfig)
+
+	// Enable for gemini (no existing redaction block)
+	if err := UpdateProviderPatternRedaction("gemini", true); err != nil {
+		t.Fatalf("UpdateProviderPatternRedaction enable: %v", err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eff := cfg.Providers["gemini"].EffectivePatternRedaction(nil)
+	if !eff.IsEnabled() {
+		t.Error("expected pattern redaction enabled for gemini")
+	}
+
+	// Disable it
+	if err := UpdateProviderPatternRedaction("gemini", false); err != nil {
+		t.Fatalf("UpdateProviderPatternRedaction disable: %v", err)
+	}
+	cfg2, _ := Load()
+	eff2 := cfg2.Providers["gemini"].EffectivePatternRedaction(nil)
+	if eff2.IsEnabled() {
+		t.Error("expected pattern redaction disabled for gemini")
+	}
+
+	// Unknown provider → error
+	if err := UpdateProviderPatternRedaction("unknown", true); err == nil {
+		t.Error("expected error for unknown provider")
+	}
+}
+
+func TestUpdateProviderEntropyRedaction(t *testing.T) {
+	writeConfig(t, baseConfig)
+
+	if err := UpdateProviderEntropyRedaction("openai", true); err != nil {
+		t.Fatalf("UpdateProviderEntropyRedaction: %v", err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eff := cfg.Providers["openai"].EffectiveEntropyRedaction(nil)
+	if !eff.IsEnabled() {
+		t.Error("expected entropy redaction enabled for openai")
+	}
+	// default threshold and min_length should be written
+	if eff.GetThreshold() != 4.5 {
+		t.Errorf("expected default threshold 4.5, got %f", eff.GetThreshold())
+	}
+	if eff.GetMinLength() != 20 {
+		t.Errorf("expected default min_length 20, got %d", eff.GetMinLength())
+	}
+}
+
+func TestAddOllamaProvider(t *testing.T) {
+	writeConfig(t, baseConfig)
+
+	if err := AddOllamaProvider("http://localhost:11434/api/chat", "llama3.2"); err != nil {
+		t.Fatalf("AddOllamaProvider: %v", err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(cfg.ProviderOrder, "ollama") {
+		t.Error("ollama not in provider_order after add")
+	}
+	p, ok := cfg.Providers["ollama"]
+	if !ok {
+		t.Fatal("ollama provider block not found")
+	}
+	if p.Host != "http://localhost:11434/api/chat" {
+		t.Errorf("unexpected host: %q", p.Host)
+	}
+	if p.Model != "llama3.2" {
+		t.Errorf("unexpected model: %q", p.Model)
+	}
+
+	// Calling again should upsert (not duplicate)
+	if err := AddOllamaProvider("http://localhost:11434/api/chat", "llama3.2"); err != nil {
+		t.Fatalf("AddOllamaProvider upsert: %v", err)
+	}
+	cfg2, _ := Load()
+	count := 0
+	for _, name := range cfg2.ProviderOrder {
+		if name == "ollama" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("ollama appears %d times in provider_order, want 1", count)
+	}
+}
+
 // AddProvider followed by RemoveProvider should leave the config clean.
 func TestAddThenRemoveProvider(t *testing.T) {
 	writeConfig(t, baseConfig)

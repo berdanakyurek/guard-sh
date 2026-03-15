@@ -114,6 +114,23 @@ func TestEntropyRedactor_MultipleHighEntropyTokens(t *testing.T) {
 	}
 }
 
+func TestEntropyRedactor_ThresholdBoundary(t *testing.T) {
+	// "ab" has exactly 1.0 bit entropy (2 unique chars, uniform distribution)
+	// threshold uses >=, so at exactly threshold the token IS redacted
+	r := NewEntropyRedactor(1.0, 2)
+	got := r.Redact("ab")
+	if got == "ab" {
+		t.Errorf("token at exact threshold should be redacted (>= check), got unchanged")
+	}
+
+	// Token below threshold should not be redacted
+	r2 := NewEntropyRedactor(1.1, 2)
+	got2 := r2.Redact("ab")
+	if got2 != "ab" {
+		t.Errorf("token below threshold should not be redacted, got %q", got2)
+	}
+}
+
 func TestEntropyRedactor_NilSafe(t *testing.T) {
 	r := NewEntropyRedactor(4.5, 20)
 	got := r.Redact("")
