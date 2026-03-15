@@ -141,6 +141,52 @@ cache_max_size: 1000
 
 The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
 
+** Redaction
+  :PROPERTIES:
+  :CUSTOM_ID: redaction
+  :END:
+
+guard-sh can redact sensitive values from commands before sending them to any LLM provider. Patterns are Go regular expressions stored in =redact_patterns= in your config. Matches are replaced with =[REDACTED]=.
+
+Default patterns cover common cases:
+
+#+begin_src yaml
+redact_patterns:
+  - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
+  - '(?i)--password\s+\S+'
+  - 'AKIA[0-9A-Z]{16}'
+#+end_src
+
+You can add your own patterns. For example:
+
+#+begin_src yaml
+redact_patterns:
+  - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
+  - '(?i)--password\s+\S+'
+  - 'AKIA[0-9A-Z]{16}'
+  - 'ghp_[a-zA-Z0-9]{36}'        # GitHub personal access tokens
+  - 'xox[baprs]-[a-zA-Z0-9-]+'   # Slack tokens
+#+end_src
+
+Redaction is enabled per provider. The default is on for all providers. Toggle it interactively:
+
+#+begin_src bash
+guard-sh redact on    # interactively enable redaction for a provider
+guard-sh redact off   # interactively disable redaction for a provider
+#+end_src
+
+Or set it directly in the config:
+
+#+begin_src yaml
+providers:
+  gemini:
+    api_key: YOUR_KEY
+    pattern_based_redaction_enabled: true   # default, can omit
+  ollama:
+    host: http://localhost:11434/api/chat
+    pattern_based_redaction_enabled: false  # disable for local model
+#+end_src
+
 ** Provider-specific prompts
 
 To use a different prompt for a specific provider, create =prompt_PROVIDERNAME.txt= in the same directory:

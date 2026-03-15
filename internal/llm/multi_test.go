@@ -6,23 +6,26 @@ import (
 	"testing"
 
 	"github.com/Berdan/guard-sh/internal/guard"
+	"github.com/Berdan/guard-sh/internal/redact"
 )
 
 type mockProvider struct {
-	response string
-	err      error
-	called   int
+	response    string
+	err         error
+	called      int
+	lastCommand string
 }
 
-func (m *mockProvider) Query(_ context.Context, _, _ string) (string, error) {
+func (m *mockProvider) Query(_ context.Context, _, cmd string) (string, error) {
 	m.called++
+	m.lastCommand = cmd
 	return m.response, m.err
 }
 
 func TestMulti_FirstProviderSucceeds(t *testing.T) {
 	p1 := &mockProvider{response: "OK"}
 	p2 := &mockProvider{response: "fallback"}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil)
 
 	result, err := m.Query(context.Background(), "", "ls")
 	if err != nil {
@@ -42,7 +45,7 @@ func TestMulti_FirstProviderSucceeds(t *testing.T) {
 func TestMulti_FallbackOnError(t *testing.T) {
 	p1 := &mockProvider{err: errors.New("rate limit")}
 	p2 := &mockProvider{response: "Deletes everything"}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil)
 
 	result, err := m.Query(context.Background(), "", "rm -rf /")
 	if err != nil {
@@ -62,7 +65,7 @@ func TestMulti_FallbackOnError(t *testing.T) {
 func TestMulti_AllFail(t *testing.T) {
 	p1 := &mockProvider{err: errors.New("error 1")}
 	p2 := &mockProvider{err: errors.New("error 2")}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil)
 
 	_, err := m.Query(context.Background(), "", "rm -rf /")
 	if err == nil {
@@ -74,9 +77,63 @@ func TestMulti_AllFail(t *testing.T) {
 }
 
 func TestMulti_EmptyProviders(t *testing.T) {
-	m := NewMulti(nil, nil, nil, nil)
+	m := NewMulti(nil, nil, nil, nil, nil, nil)
 	_, err := m.Query(context.Background(), "", "ls")
 	if err == nil {
 		t.Error("expected error with no providers, got nil")
+	}
+}
+
+func TestMulti_RedactionApplied(t *testing.T) {
+	p := &mockProvider{response: "OK"}
+	r, err := redact.New([]string{`(?i)password=\S+`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	redactEnabled := map[string]bool{"p1": true}
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, r, redactEnabled, nil)
+
+	_, err = m.Query(context.Background(), "", "mysql password=secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.lastCommand != "mysql [REDACTED]" {
+		t.Errorf("expected redacted command, got %q", p.lastCommand)
+	}
+}
+
+func TestMulti_RedactionDisabledForProvider(t *testing.T) {
+	p := &mockProvider{response: "OK"}
+	r, err := redact.New([]string{`(?i)password=\S+`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	redactEnabled := map[string]bool{"p1": false}
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, r, redactEnabled, nil)
+
+	_, err = m.Query(context.Background(), "", "mysql password=secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.lastCommand != "mysql password=secret" {
+		t.Errorf("expected original command when redaction disabled, got %q", p.lastCommand)
+	}
+}
+
+func TestMulti_RedactionPerProvider(t *testing.T) {
+	p1 := &mockProvider{response: "OK"}
+	p2 := &mockProvider{err: errors.New("fail")}
+	p3 := &mockProvider{response: "OK"}
+	r, err := redact.New([]string{`(?i)password=\S+`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	redactEnabled := map[string]bool{"p1": true, "p2": false, "p3": false}
+	m := NewMulti([]string{"p1", "p2", "p3"}, []guard.Provider{p1, p2, p3}, nil, r, redactEnabled, nil)
+
+	m.Query(context.Background(), "", "mysql password=secret")
+
+	if p1.lastCommand != "mysql [REDACTED]" {
+		t.Errorf("p1: expected redacted, got %q", p1.lastCommand)
 	}
 }
