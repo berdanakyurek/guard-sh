@@ -119,9 +119,9 @@ func runStatus(args []string) {
 		}
 		redactBadge := ""
 		if p.RedactionEnabled() {
-			redactBadge = "  " + dim + "redact " + reset + green + "●" + reset
+			redactBadge = "  " + dim + "pattern " + reset + green + "●" + reset
 		} else {
-			redactBadge = "  " + dim + "redact " + reset + dim + "○" + reset
+			redactBadge = "  " + dim + "pattern " + reset + dim + "○" + reset
 		}
 		fmt.Printf("  %s%d%s  %s%-10s%s%s%s%s\n",
 			dim, i+1, reset,

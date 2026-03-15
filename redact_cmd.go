@@ -10,21 +10,37 @@ import (
 
 func runRedact(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh redact [on|off]\n")
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh redact <type> [on|off]\n")
+		fmt.Fprintf(os.Stderr, "Types: pattern\n")
 		os.Exit(2)
 	}
 	switch args[0] {
-	case "on":
-		runRedactSet(true)
-	case "off":
-		runRedactSet(false)
+	case "pattern":
+		runRedactType("pattern", args[1:])
 	default:
-		fmt.Fprintf(os.Stderr, "Usage: guard-sh redact [on|off]\n")
+		fmt.Fprintf(os.Stderr, "guard-sh: unknown redaction type %q\n", args[0])
+		fmt.Fprintf(os.Stderr, "Types: pattern\n")
 		os.Exit(2)
 	}
 }
 
-func runRedactSet(enable bool) {
+func runRedactType(redactType string, args []string) {
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh redact %s [on|off]\n", redactType)
+		os.Exit(2)
+	}
+	switch args[0] {
+	case "on":
+		runRedactPatternSet(true)
+	case "off":
+		runRedactPatternSet(false)
+	default:
+		fmt.Fprintf(os.Stderr, "Usage: guard-sh redact %s [on|off]\n", redactType)
+		os.Exit(2)
+	}
+}
+
+func runRedactPatternSet(enable bool) {
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
@@ -39,7 +55,7 @@ func runRedactSet(enable bool) {
 	if !enable {
 		action = "disable"
 	}
-	fmt.Printf("\n  %sredaction: %s%s\n\n", bold, action, reset)
+	fmt.Printf("\n  %spattern redaction: %s%s\n\n", bold, action, reset)
 
 	for i, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
@@ -62,8 +78,8 @@ func runRedactSet(enable bool) {
 	}
 
 	if enable {
-		fmt.Printf("\n  %s● redaction enabled for %s%s\n\n", green, name, reset)
+		fmt.Printf("\n  %s● pattern redaction enabled for %s%s\n\n", green, name, reset)
 	} else {
-		fmt.Printf("\n  %s○ redaction disabled for %s%s\n\n", red, name, reset)
+		fmt.Printf("\n  %s○ pattern redaction disabled for %s%s\n\n", red, name, reset)
 	}
 }

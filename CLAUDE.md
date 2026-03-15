@@ -42,8 +42,8 @@ guard-sh provider order         interactive TUI: reorder providers with arrow ke
 guard-sh whitelist              list all whitelisted commands
 guard-sh whitelist add <cmd>    add a command (LLM never called for it)
 guard-sh whitelist remove <cmd> remove a command from the whitelist
-guard-sh redact on               interactive: enable redaction for a selected provider
-guard-sh redact off              interactive: disable redaction for a selected provider
+guard-sh redact pattern on       interactive: enable pattern-based redaction for a provider
+guard-sh redact pattern off      interactive: disable pattern-based redaction for a provider
 guard-sh cache on/off           enable/disable response caching
 guard-sh cache size <n>         set max cached entries
 guard-sh cache clear            delete all cached responses

@@ -171,8 +171,8 @@ redact_patterns:
 Redaction is enabled per provider. The default is on for all providers. Toggle it interactively:
 
 #+begin_src bash
-guard-sh redact on    # interactively enable redaction for a provider
-guard-sh redact off   # interactively disable redaction for a provider
+guard-sh redact pattern on    # interactively enable pattern redaction for a provider
+guard-sh redact pattern off   # interactively disable pattern redaction for a provider
 #+end_src
 
 Or set it directly in the config:
