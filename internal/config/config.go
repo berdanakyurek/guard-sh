@@ -11,9 +11,19 @@ import (
 )
 
 type ProviderConfig struct {
-	APIKey string `yaml:"api_key"`
-	Model  string `yaml:"model"`
-	Host   string `yaml:"host"`
+	APIKey                      string `yaml:"api_key"`
+	Model                       string `yaml:"model"`
+	Host                        string `yaml:"host"`
+	PatternBasedRedactionEnabled *bool  `yaml:"pattern_based_redaction_enabled"`
+}
+
+// RedactionEnabled returns whether pattern-based redaction is enabled for this provider.
+// Defaults to true if not explicitly set.
+func (p *ProviderConfig) RedactionEnabled() bool {
+	if p == nil || p.PatternBasedRedactionEnabled == nil {
+		return true
+	}
+	return *p.PatternBasedRedactionEnabled
 }
 
 type Config struct {
@@ -23,6 +33,7 @@ type Config struct {
 	CacheEnabled     *bool                      `yaml:"cache_enabled"`
 	CacheMaxSize     int                        `yaml:"cache_max_size"`
 	CommandWhitelist []string                   `yaml:"command_whitelist"`
+	RedactPatterns   []string                   `yaml:"redact_patterns"`
 }
 
 func (c *Config) Get(name string) (*ProviderConfig, error) {
@@ -368,6 +379,41 @@ func DefaultModel(provider string) string {
 	default:
 		return ""
 	}
+}
+
+// UpdateProviderRedaction sets pattern_based_redaction_enabled for a specific provider.
+func UpdateProviderRedaction(name string, enabled bool) error {
+	cfgPath := filepath.Join(Dir(), "config.yaml")
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", cfgPath)
+	}
+	lines := strings.Split(string(data), "\n")
+	start, end := findProviderBlock(lines, name)
+	if start < 0 {
+		return fmt.Errorf("provider %q not found in config", name)
+	}
+
+	val := "true"
+	if !enabled {
+		val = "false"
+	}
+	newLine := "    pattern_based_redaction_enabled: " + val
+
+	// Update existing field if present within the block
+	for i := start + 1; i < end; i++ {
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "pattern_based_redaction_enabled:") {
+			lines[i] = newLine
+			return os.WriteFile(cfgPath, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+
+	// Insert at end of block
+	result := make([]string, 0, len(lines)+1)
+	result = append(result, lines[:end]...)
+	result = append(result, newLine)
+	result = append(result, lines[end:]...)
+	return os.WriteFile(cfgPath, []byte(strings.Join(result, "\n")), 0600)
 }
 
 func DefaultHost(provider string) string {

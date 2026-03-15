@@ -14,6 +14,14 @@ cache_enabled: true
 # Maximum number of cached responses to keep. Oldest entries are evicted when full.
 cache_max_size: 1000
 
+# Patterns to redact from commands before sending to LLM providers.
+# Uses Go regular expressions. Matches are replaced with [REDACTED].
+# Per-provider redaction can be toggled with: guard-sh redact on/off
+redact_patterns:
+  - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
+  - '(?i)--password\s+\S+'
+  - 'AKIA[0-9A-Z]{16}'
+
 # Commands that are always considered safe — API is never called for these.
 # Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).
 # If multiple commands are chained (&&, ||, ;, |), ALL parts must be whitelisted.

@@ -19,6 +19,7 @@ import (
 	"github.com/Berdan/guard-sh/internal/llm/gemini"
 	"github.com/Berdan/guard-sh/internal/llm/ollama"
 	"github.com/Berdan/guard-sh/internal/llm/openai"
+	"github.com/Berdan/guard-sh/internal/redact"
 )
 
 //go:embed prompt.txt
@@ -116,11 +117,20 @@ func runStatus(args []string) {
 		if model == "" {
 			model = config.DefaultModel(name)
 		}
-		fmt.Printf("  %s%d%s  %s%-10s%s%s%s\n",
-			dim, i+1, reset,
-			cyan, name, reset,
-			dim, model+reset,
-		)
+		redactBadge := ""
+		if p.RedactionEnabled() {
+			redactBadge = green + "● on" + reset
+		} else {
+			redactBadge = dim + "○ off" + reset
+		}
+		fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, cyan, name, reset)
+		fmt.Printf("  %s   %smodel%s                %s%s%s\n", dim+"  "+reset, dim, reset, dim, model, reset)
+		fmt.Printf("  %s   %spattern based redaction%s  %s\n\n", dim+"  "+reset, dim, reset, redactBadge)
+	}
+
+	if len(cfg.RedactPatterns) > 0 {
+		fmt.Printf("\n  %sredaction%s\n", bold, reset)
+		fmt.Printf("  %s  %s%d patterns active%s\n", label("patterns"), dim, len(cfg.RedactPatterns), reset)
 	}
 
 	if len(cfg.CommandWhitelist) > 0 {
@@ -287,6 +297,11 @@ func main() {
 		return
 	}
 
+	if len(os.Args) >= 2 && os.Args[1] == "redact" {
+		runRedact(os.Args[2:])
+		return
+	}
+
 	if len(os.Args) >= 2 && os.Args[1] == "setup" {
 		runSetup()
 		return
@@ -373,7 +388,22 @@ func main() {
 		}
 	}
 
-	g := guard.New(llm.NewMulti(names, providers, providerPrompts, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
+	var redactor *redact.Redactor
+	if len(cfg.RedactPatterns) > 0 {
+		r, rerr := redact.New(cfg.RedactPatterns)
+		if rerr != nil {
+			fmt.Fprintf(os.Stderr, "guard-sh: %v\n", rerr)
+			os.Exit(0) // fail open
+		}
+		redactor = r
+	}
+
+	redactEnabled := make(map[string]bool, len(names))
+	for _, name := range names {
+		redactEnabled[name] = cfg.Providers[name].RedactionEnabled()
+	}
+
+	g := guard.New(llm.NewMulti(names, providers, providerPrompts, redactor, redactEnabled, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {

@@ -44,6 +44,11 @@ func runHelp() {
 	fmt.Printf("  %s %s\n", c("guard-sh provider remove"), d("interactively remove a configured provider"))
 	fmt.Printf("  %s %s\n\n", c("guard-sh provider order"), d("interactively reorder providers with arrow keys"))
 
+	// Redact
+	fmt.Printf("  %s\n", b("redact"))
+	fmt.Printf("  %s %s\n", c("guard-sh redact pattern on"), d("interactively enable pattern-based redaction for a provider"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh redact pattern off"), d("interactively disable pattern-based redaction for a provider"))
+
 	// Cache
 	fmt.Printf("  %s\n", b("cache"))
 	fmt.Printf("  %s %s\n", c("guard-sh cache on"), d("enable response caching"))
@@ -53,7 +58,7 @@ func runHelp() {
 
 	// Config
 	fmt.Printf("  %s\n", b("config"))
-	fmt.Printf("  %s\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout"))
+	fmt.Printf("  %s\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout, redact_patterns"))
 	fmt.Printf("  %s\n", d("~/.config/guard-sh/prompt.txt — default system prompt (edit without rebuild)"))
 	fmt.Printf("  %s\n\n", d("~/.config/guard-sh/prompt_<provider>.txt — per-provider prompt override"))
 
