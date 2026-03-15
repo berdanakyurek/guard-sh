@@ -10,53 +10,117 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EntropyConfig holds per-provider entropy-based redaction settings.
-type EntropyConfig struct {
+// PatternRedactionConfig holds pattern-based redaction settings.
+type PatternRedactionConfig struct {
+	Enabled  *bool    `yaml:"enabled"`
+	Patterns []string `yaml:"patterns"`
+}
+
+// IsEnabled returns true if enabled is unset (default on) or explicitly true.
+func (c *PatternRedactionConfig) IsEnabled() bool {
+	if c == nil || c.Enabled == nil {
+		return true
+	}
+	return *c.Enabled
+}
+
+// GetPatterns returns the configured patterns, or nil if none.
+func (c *PatternRedactionConfig) GetPatterns() []string {
+	if c == nil {
+		return nil
+	}
+	return c.Patterns
+}
+
+// EntropyRedactionConfig holds Shannon entropy-based redaction settings.
+type EntropyRedactionConfig struct {
 	Enabled   *bool   `yaml:"enabled"`
 	Threshold float64 `yaml:"threshold"`
 	MinLength int     `yaml:"min_length"`
 }
 
-type ProviderConfig struct {
-	APIKey                       string         `yaml:"api_key"`
-	Model                        string         `yaml:"model"`
-	Host                         string         `yaml:"host"`
-	PatternBasedRedactionEnabled *bool          `yaml:"pattern_based_redaction_enabled"`
-	RedactEntropy                *EntropyConfig `yaml:"redact_entropy"`
-}
-
-// RedactionEnabled returns whether pattern-based redaction is enabled for this provider.
-// Defaults to true if not explicitly set.
-func (p *ProviderConfig) RedactionEnabled() bool {
-	if p == nil || p.PatternBasedRedactionEnabled == nil {
-		return true
-	}
-	return *p.PatternBasedRedactionEnabled
-}
-
-// EntropyRedactionEnabled returns whether entropy-based redaction is enabled for this provider.
-// Defaults to false if not explicitly set.
-func (p *ProviderConfig) EntropyRedactionEnabled() bool {
-	if p == nil || p.RedactEntropy == nil || p.RedactEntropy.Enabled == nil {
+// IsEnabled returns true only if explicitly set to true (default off).
+func (c *EntropyRedactionConfig) IsEnabled() bool {
+	if c == nil || c.Enabled == nil {
 		return false
 	}
-	return *p.RedactEntropy.Enabled
+	return *c.Enabled
 }
 
-// GetEntropyThreshold returns the entropy threshold for this provider, defaulting to 4.5.
-func (p *ProviderConfig) GetEntropyThreshold() float64 {
-	if p == nil || p.RedactEntropy == nil || p.RedactEntropy.Threshold <= 0 {
+// GetThreshold returns the entropy threshold, defaulting to 4.5 bits/char.
+func (c *EntropyRedactionConfig) GetThreshold() float64 {
+	if c == nil || c.Threshold <= 0 {
 		return 4.5
 	}
-	return p.RedactEntropy.Threshold
+	return c.Threshold
 }
 
-// GetEntropyMinLength returns the minimum token length for entropy redaction, defaulting to 20.
-func (p *ProviderConfig) GetEntropyMinLength() int {
-	if p == nil || p.RedactEntropy == nil || p.RedactEntropy.MinLength <= 0 {
+// GetMinLength returns the minimum token length, defaulting to 20.
+func (c *EntropyRedactionConfig) GetMinLength() int {
+	if c == nil || c.MinLength <= 0 {
 		return 20
 	}
-	return p.RedactEntropy.MinLength
+	return c.MinLength
+}
+
+// RedactionConfig holds all redaction settings. Used both at global level and per-provider.
+type RedactionConfig struct {
+	PatternBased        *PatternRedactionConfig `yaml:"pattern_based"`
+	ShannonEntropyBased *EntropyRedactionConfig `yaml:"shannon_entropy_based"`
+}
+
+type ProviderConfig struct {
+	APIKey    string           `yaml:"api_key"`
+	Model     string           `yaml:"model"`
+	Host      string           `yaml:"host"`
+	Redaction *RedactionConfig `yaml:"redaction"`
+}
+
+// EffectivePatternRedaction returns the effective pattern config for this provider,
+// merging per-provider overrides on top of the global config.
+func (p *ProviderConfig) EffectivePatternRedaction(global *PatternRedactionConfig) *PatternRedactionConfig {
+	if p == nil || p.Redaction == nil || p.Redaction.PatternBased == nil {
+		return global
+	}
+	pb := p.Redaction.PatternBased
+	result := &PatternRedactionConfig{}
+	if pb.Enabled != nil {
+		result.Enabled = pb.Enabled
+	} else if global != nil {
+		result.Enabled = global.Enabled
+	}
+	if len(pb.Patterns) > 0 {
+		result.Patterns = pb.Patterns
+	} else if global != nil {
+		result.Patterns = global.Patterns
+	}
+	return result
+}
+
+// EffectiveEntropyRedaction returns the effective entropy config for this provider,
+// merging per-provider overrides on top of the global config.
+func (p *ProviderConfig) EffectiveEntropyRedaction(global *EntropyRedactionConfig) *EntropyRedactionConfig {
+	if p == nil || p.Redaction == nil || p.Redaction.ShannonEntropyBased == nil {
+		return global
+	}
+	eb := p.Redaction.ShannonEntropyBased
+	result := &EntropyRedactionConfig{}
+	if eb.Enabled != nil {
+		result.Enabled = eb.Enabled
+	} else if global != nil {
+		result.Enabled = global.Enabled
+	}
+	if eb.Threshold > 0 {
+		result.Threshold = eb.Threshold
+	} else if global != nil {
+		result.Threshold = global.Threshold
+	}
+	if eb.MinLength > 0 {
+		result.MinLength = eb.MinLength
+	} else if global != nil {
+		result.MinLength = global.MinLength
+	}
+	return result
 }
 
 type Config struct {
@@ -66,7 +130,7 @@ type Config struct {
 	CacheEnabled     *bool                      `yaml:"cache_enabled"`
 	CacheMaxSize     int                        `yaml:"cache_max_size"`
 	CommandWhitelist []string                   `yaml:"command_whitelist"`
-	RedactPatterns   []string                   `yaml:"redact_patterns"`
+	Redaction        RedactionConfig            `yaml:"redaction"`
 }
 
 func (c *Config) Get(name string) (*ProviderConfig, error) {
@@ -414,16 +478,31 @@ func DefaultModel(provider string) string {
 	}
 }
 
-// UpdateProviderRedaction sets pattern_based_redaction_enabled for a specific provider.
-func UpdateProviderRedaction(name string, enabled bool) error {
+// UpdateProviderPatternRedaction sets redaction.pattern_based.enabled for a specific provider.
+func UpdateProviderPatternRedaction(name string, enabled bool) error {
+	return updateProviderRedactionEnabled(name, "pattern_based", enabled)
+}
+
+// UpdateProviderEntropyRedaction sets redaction.shannon_entropy_based.enabled for a specific provider.
+// If the block does not exist it is created with default threshold and min_length.
+func UpdateProviderEntropyRedaction(name string, enabled bool) error {
+	return updateProviderRedactionEnabled(name, "shannon_entropy_based", enabled)
+}
+
+// updateProviderRedactionEnabled writes the enabled flag for a redaction type under
+// providers.NAME.redaction.TYPE, creating intermediate blocks as needed.
+//
+// Provider block indent: 2sp (name) / 4sp (fields)
+// redaction block:       4sp (header) / 6sp (type headers) / 8sp (type fields)
+func updateProviderRedactionEnabled(name, redactionType string, enabled bool) error {
 	cfgPath := filepath.Join(Dir(), "config.yaml")
 	data, err := os.ReadFile(cfgPath)
 	if err != nil {
 		return fmt.Errorf("config not found at %s", cfgPath)
 	}
 	lines := strings.Split(string(data), "\n")
-	start, end := findProviderBlock(lines, name)
-	if start < 0 {
+	pStart, pEnd := findProviderBlock(lines, name)
+	if pStart < 0 {
 		return fmt.Errorf("provider %q not found in config", name)
 	}
 
@@ -431,77 +510,81 @@ func UpdateProviderRedaction(name string, enabled bool) error {
 	if !enabled {
 		val = "false"
 	}
-	newLine := "    pattern_based_redaction_enabled: " + val
 
-	// Update existing field if present within the block
-	for i := start + 1; i < end; i++ {
-		if strings.HasPrefix(strings.TrimSpace(lines[i]), "pattern_based_redaction_enabled:") {
-			lines[i] = newLine
-			return os.WriteFile(cfgPath, []byte(strings.Join(lines, "\n")), 0600)
+	// Find "    redaction:" within provider block
+	redactionLine := -1
+	for i := pStart + 1; i < pEnd; i++ {
+		if lines[i] == "    redaction:" {
+			redactionLine = i
+			break
 		}
 	}
 
-	// Insert at end of block
-	result := make([]string, 0, len(lines)+1)
-	result = append(result, lines[:end]...)
-	result = append(result, newLine)
-	result = append(result, lines[end:]...)
-	return os.WriteFile(cfgPath, []byte(strings.Join(result, "\n")), 0600)
-}
+	if redactionLine >= 0 {
+		// End of redaction block: first line without 6-space prefix
+		redactionEnd := redactionLine + 1
+		for redactionEnd < pEnd && strings.HasPrefix(lines[redactionEnd], "      ") {
+			redactionEnd++
+		}
 
-// UpdateProviderEntropyRedaction sets redact_entropy.enabled for a specific provider.
-// If the redact_entropy block does not exist, it is created with default threshold and min_length.
-func UpdateProviderEntropyRedaction(name string, enabled bool) error {
-	cfgPath := filepath.Join(Dir(), "config.yaml")
-	data, err := os.ReadFile(cfgPath)
-	if err != nil {
-		return fmt.Errorf("config not found at %s", cfgPath)
-	}
-	lines := strings.Split(string(data), "\n")
-	start, end := findProviderBlock(lines, name)
-	if start < 0 {
-		return fmt.Errorf("provider %q not found in config", name)
-	}
+		// Find "      TYPE:" within redaction block
+		typeLine := -1
+		for i := redactionLine + 1; i < redactionEnd; i++ {
+			if lines[i] == "      "+redactionType+":" {
+				typeLine = i
+				break
+			}
+		}
 
-	val := "true"
-	if !enabled {
-		val = "false"
-	}
-
-	// Look for existing redact_entropy: block within the provider block
-	for i := start + 1; i < end; i++ {
-		if strings.TrimSpace(lines[i]) == "redact_entropy:" {
-			// Find enabled: within the sub-block (6-space indent)
-			for j := i + 1; j < end; j++ {
-				if !strings.HasPrefix(lines[j], "      ") {
-					break
-				}
-				if strings.HasPrefix(strings.TrimSpace(lines[j]), "enabled:") {
-					lines[j] = "      enabled: " + val
+		if typeLine >= 0 {
+			// End of type sub-block: first line without 8-space prefix
+			typeEnd := typeLine + 1
+			for typeEnd < redactionEnd && strings.HasPrefix(lines[typeEnd], "        ") {
+				typeEnd++
+			}
+			// Find "        enabled:"
+			for i := typeLine + 1; i < typeEnd; i++ {
+				if strings.HasPrefix(strings.TrimSpace(lines[i]), "enabled:") {
+					lines[i] = "        enabled: " + val
 					return os.WriteFile(cfgPath, []byte(strings.Join(lines, "\n")), 0600)
 				}
 			}
-			// enabled: not found — insert right after redact_entropy:
-			result := make([]string, 0, len(lines)+1)
-			result = append(result, lines[:i+1]...)
-			result = append(result, "      enabled: "+val)
-			result = append(result, lines[i+1:]...)
+			// Not found — insert after type header
+			result := insertLines(lines, typeLine+1, []string{"        enabled: " + val})
 			return os.WriteFile(cfgPath, []byte(strings.Join(result, "\n")), 0600)
 		}
+
+		// Type block not found — insert at start of redaction block
+		result := insertLines(lines, redactionLine+1, newTypeBlock(redactionType, val))
+		return os.WriteFile(cfgPath, []byte(strings.Join(result, "\n")), 0600)
 	}
 
-	// No redact_entropy block — append it before end of provider block
-	newBlock := []string{
-		"    redact_entropy:",
-		"      enabled: " + val,
-		"      threshold: 4.5",
-		"      min_length: 20",
-	}
-	result := make([]string, 0, len(lines)+len(newBlock))
-	result = append(result, lines[:end]...)
-	result = append(result, newBlock...)
-	result = append(result, lines[end:]...)
+	// No redaction block — insert before end of provider block
+	newLines := append([]string{"    redaction:"}, newTypeBlock(redactionType, val)...)
+	result := insertLines(lines, pEnd, newLines)
 	return os.WriteFile(cfgPath, []byte(strings.Join(result, "\n")), 0600)
+}
+
+func newTypeBlock(redactionType, enabledVal string) []string {
+	block := []string{
+		"      " + redactionType + ":",
+		"        enabled: " + enabledVal,
+	}
+	if redactionType == "shannon_entropy_based" {
+		block = append(block,
+			"        threshold: 4.5",
+			"        min_length: 20",
+		)
+	}
+	return block
+}
+
+func insertLines(lines []string, at int, insert []string) []string {
+	result := make([]string, 0, len(lines)+len(insert))
+	result = append(result, lines[:at]...)
+	result = append(result, insert...)
+	result = append(result, lines[at:]...)
+	return result
 }
 
 func DefaultHost(provider string) string {

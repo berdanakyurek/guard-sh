@@ -23,20 +23,18 @@ const (
 type Multi struct {
 	providers        []guard.Provider
 	names            []string
-	prompts          map[string]string // per-provider prompt overrides
-	redactor         *redact.Redactor
-	redactEnabled    map[string]bool // per-provider pattern redaction toggle
+	prompts          map[string]string                  // per-provider prompt overrides
+	patternRedactors map[string]*redact.Redactor        // per-provider pattern redactors
 	entropyRedactors map[string]*redact.EntropyRedactor // per-provider entropy redactors
 	debug            io.Writer
 }
 
-func NewMulti(names []string, providers []guard.Provider, prompts map[string]string, redactor *redact.Redactor, redactEnabled map[string]bool, entropyRedactors map[string]*redact.EntropyRedactor, debug io.Writer) *Multi {
+func NewMulti(names []string, providers []guard.Provider, prompts map[string]string, patternRedactors map[string]*redact.Redactor, entropyRedactors map[string]*redact.EntropyRedactor, debug io.Writer) *Multi {
 	return &Multi{
 		names:            names,
 		providers:        providers,
 		prompts:          prompts,
-		redactor:         redactor,
-		redactEnabled:    redactEnabled,
+		patternRedactors: patternRedactors,
 		entropyRedactors: entropyRedactors,
 		debug:            debug,
 	}
@@ -50,8 +48,8 @@ func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string
 			prompt = override
 		}
 		cmd := command
-		if m.redactor != nil && m.redactEnabled[name] {
-			cmd = m.redactor.Redact(cmd)
+		if pr, ok := m.patternRedactors[name]; ok && pr != nil {
+			cmd = pr.Redact(cmd)
 			if m.debug != nil && cmd != command {
 				fmt.Fprintf(m.debug, "  %sredact (pattern)%s  %s→ %q%s\n", dbgDim, dbgReset, dbgDim, cmd, dbgReset)
 			}

@@ -77,7 +77,8 @@ func runRedactEntropySet(enable bool) {
 
 	for i, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
-		badge := statusBadge(map[bool]string{true: "on", false: "off"}[p.EntropyRedactionEnabled()])
+		effective := p.EffectiveEntropyRedaction(cfg.Redaction.ShannonEntropyBased)
+		badge := statusBadge(map[bool]string{true: "on", false: "off"}[effective.IsEnabled()])
 		fmt.Printf("  %s%d%s  %s%-10s%s  %s\n", dim, i+1, reset, cyan, name, reset, badge)
 	}
 
@@ -121,7 +122,8 @@ func runRedactPatternSet(enable bool) {
 
 	for i, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
-		badge := statusBadge(map[bool]string{true: "on", false: "off"}[p.RedactionEnabled()])
+		effective := p.EffectivePatternRedaction(cfg.Redaction.PatternBased)
+		badge := statusBadge(map[bool]string{true: "on", false: "off"}[effective.IsEnabled()])
 		fmt.Printf("  %s%d%s  %s%-10s%s  %s\n", dim, i+1, reset, cyan, name, reset, badge)
 	}
 
@@ -134,7 +136,7 @@ func runRedactPatternSet(enable bool) {
 	}
 
 	name := cfg.ProviderOrder[idx-1]
-	if err := config.UpdateProviderRedaction(name, enable); err != nil {
+	if err := config.UpdateProviderPatternRedaction(name, enable); err != nil {
 		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
 		os.Exit(1)
 	}

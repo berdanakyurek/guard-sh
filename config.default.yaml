@@ -14,24 +14,21 @@ cache_enabled: true
 # Maximum number of cached responses to keep. Oldest entries are evicted when full.
 cache_max_size: 1000
 
-# Patterns to redact from commands before sending to LLM providers.
-# Uses Go regular expressions. Matches are replaced with [REDACTED].
-# Per-provider redaction can be toggled with: guard-sh redact pattern on/off
-redact_patterns:
-  - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
-  - '(?i)--password\s+\S+'
-  - 'AKIA[0-9A-Z]{16}'
-
-# Entropy-based redaction is configured per-provider under the providers block.
-# Enable it with: guard-sh redact entropy on
-# Or add manually to a provider:
-#
-#   providers:
-#     claude:
-#       redact_entropy:
-#         enabled: true
-#         threshold: 4.5   # bits/char — typical English ~3.5, secrets typically >4.5
-#         min_length: 20   # ignore tokens shorter than this (reduces false positives)
+# Redaction: sensitive values are replaced with [REDACTED] before sending to LLM providers.
+# Per-provider overrides can be added under providers.NAME.redaction (optional).
+# Toggle per-provider with: guard-sh redact pattern on/off
+#                            guard-sh redact entropy on/off
+redaction:
+  pattern_based:
+    enabled: true
+    patterns:
+      - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
+      - '(?i)--password\s+\S+'
+      - 'AKIA[0-9A-Z]{16}'
+  shannon_entropy_based:
+    enabled: false
+    threshold: 4.5   # bits/char — typical English ~3.5, secrets typically >4.5
+    min_length: 20   # ignore tokens shorter than this (reduces false positives)
 
 # Commands that are always considered safe — API is never called for these.
 # Only the base command name is needed (e.g. "ls" covers "ls -la", "ls /tmp", etc.).

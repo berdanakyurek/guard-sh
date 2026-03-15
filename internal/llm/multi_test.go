@@ -25,7 +25,7 @@ func (m *mockProvider) Query(_ context.Context, _, cmd string) (string, error) {
 func TestMulti_FirstProviderSucceeds(t *testing.T) {
 	p1 := &mockProvider{response: "OK"}
 	p2 := &mockProvider{response: "fallback"}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil)
 
 	result, err := m.Query(context.Background(), "", "ls")
 	if err != nil {
@@ -45,7 +45,7 @@ func TestMulti_FirstProviderSucceeds(t *testing.T) {
 func TestMulti_FallbackOnError(t *testing.T) {
 	p1 := &mockProvider{err: errors.New("rate limit")}
 	p2 := &mockProvider{response: "Deletes everything"}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil)
 
 	result, err := m.Query(context.Background(), "", "rm -rf /")
 	if err != nil {
@@ -65,7 +65,7 @@ func TestMulti_FallbackOnError(t *testing.T) {
 func TestMulti_AllFail(t *testing.T) {
 	p1 := &mockProvider{err: errors.New("error 1")}
 	p2 := &mockProvider{err: errors.New("error 2")}
-	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil, nil)
+	m := NewMulti([]string{"p1", "p2"}, []guard.Provider{p1, p2}, nil, nil, nil, nil)
 
 	_, err := m.Query(context.Background(), "", "rm -rf /")
 	if err == nil {
@@ -77,21 +77,21 @@ func TestMulti_AllFail(t *testing.T) {
 }
 
 func TestMulti_EmptyProviders(t *testing.T) {
-	m := NewMulti(nil, nil, nil, nil, nil, nil, nil)
+	m := NewMulti(nil, nil, nil, nil, nil, nil)
 	_, err := m.Query(context.Background(), "", "ls")
 	if err == nil {
 		t.Error("expected error with no providers, got nil")
 	}
 }
 
-func TestMulti_RedactionApplied(t *testing.T) {
+func TestMulti_PatternRedactionApplied(t *testing.T) {
 	p := &mockProvider{response: "OK"}
 	r, err := redact.New([]string{`(?i)password=\S+`})
 	if err != nil {
 		t.Fatal(err)
 	}
-	redactEnabled := map[string]bool{"p1": true}
-	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, r, redactEnabled, nil, nil)
+	patternRedactors := map[string]*redact.Redactor{"p1": r}
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, patternRedactors, nil, nil)
 
 	_, err = m.Query(context.Background(), "", "mysql password=secret")
 	if err != nil {
@@ -102,25 +102,21 @@ func TestMulti_RedactionApplied(t *testing.T) {
 	}
 }
 
-func TestMulti_RedactionDisabledForProvider(t *testing.T) {
+func TestMulti_PatternRedactionDisabledForProvider(t *testing.T) {
 	p := &mockProvider{response: "OK"}
-	r, err := redact.New([]string{`(?i)password=\S+`})
-	if err != nil {
-		t.Fatal(err)
-	}
-	redactEnabled := map[string]bool{"p1": false}
-	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, r, redactEnabled, nil, nil)
+	// p1 has no entry in patternRedactors → disabled
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, nil, nil)
 
-	_, err = m.Query(context.Background(), "", "mysql password=secret")
+	_, err := m.Query(context.Background(), "", "mysql password=secret")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if p.lastCommand != "mysql password=secret" {
-		t.Errorf("expected original command when redaction disabled, got %q", p.lastCommand)
+		t.Errorf("expected original command when pattern redaction disabled, got %q", p.lastCommand)
 	}
 }
 
-func TestMulti_RedactionPerProvider(t *testing.T) {
+func TestMulti_PatternRedactionPerProvider(t *testing.T) {
 	p1 := &mockProvider{response: "OK"}
 	p2 := &mockProvider{err: errors.New("fail")}
 	p3 := &mockProvider{response: "OK"}
@@ -128,8 +124,9 @@ func TestMulti_RedactionPerProvider(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	redactEnabled := map[string]bool{"p1": true, "p2": false, "p3": false}
-	m := NewMulti([]string{"p1", "p2", "p3"}, []guard.Provider{p1, p2, p3}, nil, r, redactEnabled, nil, nil)
+	// only p1 has pattern redaction
+	patternRedactors := map[string]*redact.Redactor{"p1": r}
+	m := NewMulti([]string{"p1", "p2", "p3"}, []guard.Provider{p1, p2, p3}, nil, patternRedactors, nil, nil)
 
 	m.Query(context.Background(), "", "mysql password=secret")
 
@@ -142,7 +139,7 @@ func TestMulti_EntropyRedactionApplied(t *testing.T) {
 	p := &mockProvider{response: "OK"}
 	er := redact.NewEntropyRedactor(4.5, 20)
 	entropyRedactors := map[string]*redact.EntropyRedactor{"p1": er}
-	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, nil, entropyRedactors, nil)
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, entropyRedactors, nil)
 
 	secret := "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ123456"
 	_, err := m.Query(context.Background(), "", "curl -H Authorization:"+secret)
@@ -156,8 +153,7 @@ func TestMulti_EntropyRedactionApplied(t *testing.T) {
 
 func TestMulti_EntropyRedactionDisabledForProvider(t *testing.T) {
 	p := &mockProvider{response: "OK"}
-	// p1 has no entry in entropyRedactors → disabled
-	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, nil, nil, nil)
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, nil, nil)
 
 	input := "ls -la /tmp"
 	_, err := m.Query(context.Background(), "", input)
@@ -176,9 +172,9 @@ func TestMulti_PatternAndEntropyRedactionBothApplied(t *testing.T) {
 		t.Fatal(err)
 	}
 	er := redact.NewEntropyRedactor(4.5, 20)
-	redactEnabled := map[string]bool{"p1": true}
+	patternRedactors := map[string]*redact.Redactor{"p1": r}
 	entropyRedactors := map[string]*redact.EntropyRedactor{"p1": er}
-	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, r, redactEnabled, entropyRedactors, nil)
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, patternRedactors, entropyRedactors, nil)
 
 	secret := "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ123456"
 	input := "curl password=foo token:" + secret
