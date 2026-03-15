@@ -69,8 +69,12 @@ if [[ $WITH_SHELL -eq 1 ]]; then
             RC_FILE="$HOME/.bashrc"
             SHELL_SCRIPT="$INSTALL_DIR/shell/guard.bash"
             ;;
+        fish)
+            RC_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/fish/config.fish"
+            SHELL_SCRIPT="$INSTALL_DIR/shell/guard.fish"
+            ;;
         *)
-            echo "Unsupported shell: $SHELL_NAME (supported: zsh, bash)"
+            echo "Unsupported shell: $SHELL_NAME (supported: bash, zsh, fish)"
             echo "Manually source the appropriate file from $INSTALL_DIR/shell/"
             exit 0
             ;;
