@@ -17,6 +17,7 @@ import (
 	"github.com/Berdan/guard-sh/internal/llm/claude"
 	"github.com/Berdan/guard-sh/internal/llm/deepseek"
 	"github.com/Berdan/guard-sh/internal/llm/gemini"
+	"github.com/Berdan/guard-sh/internal/llm/ollama"
 	"github.com/Berdan/guard-sh/internal/llm/openai"
 )
 
@@ -349,6 +350,8 @@ func main() {
 			provider = deepseek.New(p.APIKey, p.Model)
 		case "openai":
 			provider = openai.New(p.APIKey, p.Model)
+		case "ollama":
+			provider = ollama.New(p.Host, p.Model)
 		default:
 			fmt.Fprintf(os.Stderr, "guard-sh: unknown provider %q\n", name)
 			os.Exit(0) // fail open

@@ -15,7 +15,7 @@ import (
 )
 
 var knownProviders = map[string]bool{
-	"gemini": true, "claude": true, "openai": true, "deepseek": true,
+	"gemini": true, "claude": true, "openai": true, "deepseek": true, "ollama": true,
 }
 
 func runHealthcheck() {
@@ -53,12 +53,17 @@ func runHealthcheck() {
 		p := cfg.Providers[name]
 		apiKey := ""
 		model := ""
+		host := ""
 		if p != nil {
 			apiKey = p.APIKey
 			model = p.Model
+			host = p.Host
 		}
 		if model == "" {
 			model = config.DefaultModel(name)
+		}
+		if host == "" {
+			host = config.DefaultHost(name)
 		}
 
 		nameCol := fmt.Sprintf("%-10s", name)
@@ -71,7 +76,7 @@ func runHealthcheck() {
 			continue
 		}
 
-		if apiKey == "" {
+		if apiKey == "" && name != "ollama" {
 			fmt.Printf("  %s%s%s  %s%s%s  %s✗ api_key not set%s\n",
 				cyan, nameCol, reset, dim, modelCol, reset, red, reset)
 			continue
@@ -88,6 +93,8 @@ func runHealthcheck() {
 			checkErr = healthOpenAI(ctx, hc, apiKey, model)
 		case "deepseek":
 			checkErr = healthDeepSeek(ctx, hc, apiKey, model)
+		case "ollama":
+			checkErr = healthOllama(ctx, hc, host)
 		}
 		ms := time.Since(start).Milliseconds()
 
@@ -120,6 +127,23 @@ func runHealthcheck() {
 	}
 
 	fmt.Println()
+}
+
+// healthOllama calls the Ollama tags endpoint to verify the server is running.
+func healthOllama(ctx context.Context, hc *http.Client, host string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ollamaBase(host)+"/api/tags", nil)
+	if err != nil {
+		return err
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+	return apiError(resp)
 }
 
 // healthGemini calls the Gemini model info endpoint (no tokens).
