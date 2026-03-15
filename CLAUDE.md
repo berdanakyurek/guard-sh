@@ -36,7 +36,7 @@ guard-sh status                 show session/global state, config, timeout, cach
 guard-sh check "<cmd>"          core check — exit 0 if safe, exit 1 with warning if risky
 guard-sh check "<cmd>" --debug  trace whitelist hit, cache hit, provider attempts, LLM response
 guard-sh healthcheck            validate API keys, models, latency, shell integration
-guard-sh provider add           interactive: pick provider, enter API key, pick model
+guard-sh provider add           interactive: pick provider, enter API key (or URL for ollama), pick model
 guard-sh provider remove        interactive: remove a configured provider
 guard-sh provider order         interactive TUI: reorder providers with arrow keys
 guard-sh whitelist              list all whitelisted commands
@@ -81,6 +81,8 @@ shell command typed
 
 `prompt.txt` is embedded in the binary and also copied to `~/.config/guard-sh/prompt.txt` at install time. Editing the file on disk takes effect immediately without rebuilding. The LLM is told to reply with `"OK"` for safe commands or a short plain-text warning (no markdown) for risky ones.
 
+Provider-specific prompts can be placed at `~/.config/guard-sh/prompt_PROVIDERNAME.txt` (e.g. `prompt_ollama.txt`). If present, the provider-specific file takes precedence over `prompt.txt` for that provider. Loading happens in `main.go` and is passed to `llm.Multi` as a `map[string]string`.
+
 ### Runtime config location
 
-`~/.config/guard-sh/config.yaml` — providers, API keys, whitelist, cache settings, timeout. See `config.example.yaml` for all options.
+`~/.config/guard-sh/config.yaml` — providers, API keys, whitelist, cache settings, timeout. See `config.default.yaml` (embedded in binary) for all options.
