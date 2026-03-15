@@ -119,16 +119,13 @@ func runStatus(args []string) {
 		}
 		redactBadge := ""
 		if p.RedactionEnabled() {
-			redactBadge = "  " + dim + "pattern " + reset + green + "●" + reset
+			redactBadge = green + "● on" + reset
 		} else {
-			redactBadge = "  " + dim + "pattern " + reset + dim + "○" + reset
+			redactBadge = dim + "○ off" + reset
 		}
-		fmt.Printf("  %s%d%s  %s%-10s%s%s%s%s\n",
-			dim, i+1, reset,
-			cyan, name, reset,
-			dim, model+reset,
-			redactBadge,
-		)
+		fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, cyan, name, reset)
+		fmt.Printf("  %s   %smodel%s                %s%s%s\n", dim+"  "+reset, dim, reset, dim, model, reset)
+		fmt.Printf("  %s   %spattern based redaction%s  %s\n\n", dim+"  "+reset, dim, reset, redactBadge)
 	}
 
 	if len(cfg.RedactPatterns) > 0 {
