@@ -7,8 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/Berdan/guard-sh/internal/cache"
 )
 
 const (
@@ -30,13 +28,12 @@ type Guard struct {
 	provider  Provider
 	prompt    string
 	whitelist map[string]bool
-	cache     *cache.Cache
 	debug     io.Writer
 }
 
 // New creates a Guard. If a custom prompt.txt exists in configDir it takes
 // precedence over the compiled-in defaultPrompt.
-func New(provider Provider, defaultPrompt, configDir string, whitelist []string, cacheMaxSize int, debug io.Writer) *Guard {
+func New(provider Provider, defaultPrompt, configDir string, whitelist []string, debug io.Writer) *Guard {
 	prompt := defaultPrompt
 	if data, err := os.ReadFile(filepath.Join(configDir, "prompt.txt")); err == nil {
 		prompt = string(data)
@@ -45,7 +42,7 @@ func New(provider Provider, defaultPrompt, configDir string, whitelist []string,
 	for _, cmd := range whitelist {
 		wl[strings.TrimSpace(cmd)] = true
 	}
-	return &Guard{provider: provider, prompt: prompt, whitelist: wl, cache: cache.Load(configDir, cacheMaxSize), debug: debug}
+	return &Guard{provider: provider, prompt: prompt, whitelist: wl, debug: debug}
 }
 
 func (g *Guard) dbg(format string, args ...any) {
@@ -77,19 +74,6 @@ func (g *Guard) Check(ctx context.Context, rawCmd, query string) (safe bool, war
 		g.dbg("  %swhitelist%s %sempty%s\n", dbgDim, dbgReset, dbgDim, dbgReset)
 	}
 
-	if g.cache != nil {
-		if cached, ok := g.cache.Get(query); ok {
-			g.dbg("  %scache%s     %s● hit%s %s→ %q%s\n\n", dbgDim, dbgReset, dbgGreen, dbgReset, dbgDim, cached, dbgReset)
-			if cached == "OK" || cached == "" {
-				return true, ""
-			}
-			return false, cached
-		}
-		g.dbg("  %scache%s     %s○ miss%s\n", dbgDim, dbgReset, dbgDim, dbgReset)
-	} else {
-		g.dbg("  %scache%s     %sdisabled%s\n", dbgDim, dbgReset, dbgDim, dbgReset)
-	}
-
 	g.dbg("\n  %sproviders%s\n", dbgBold, dbgReset)
 
 	response, err := g.provider.Query(ctx, g.prompt, query)
@@ -99,9 +83,6 @@ func (g *Guard) Check(ctx context.Context, rawCmd, query string) (safe bool, war
 	}
 
 	response = strings.TrimSpace(response)
-	if g.cache != nil {
-		g.cache.Set(query, response)
-	}
 
 	if response == "OK" || response == "" {
 		g.dbg("\n  %sresult%s    %s● safe%s\n\n", dbgDim, dbgReset, dbgGreen, dbgReset)

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Berdan/guard-sh/internal/cache"
 	"github.com/Berdan/guard-sh/internal/config"
 	"github.com/Berdan/guard-sh/internal/guard"
 	"github.com/Berdan/guard-sh/internal/llm"
@@ -33,6 +34,9 @@ var shellBash string
 
 //go:embed shell/guard.zsh
 var shellZsh string
+
+//go:embed shell/guard.fish
+var shellFish string
 
 var version = "dev"
 
@@ -391,9 +395,9 @@ func main() {
 		providers = append(providers, provider)
 	}
 
-	cacheMaxSize := 0 // disabled
+	var providerCache *cache.Cache
 	if cfg.CacheEnabled == nil || *cfg.CacheEnabled {
-		cacheMaxSize = cfg.CacheMaxSize
+		providerCache = cache.Load(config.Dir(), cfg.CacheMaxSize)
 	}
 	providerPrompts := make(map[string]string)
 	for _, name := range names {
@@ -429,7 +433,7 @@ func main() {
 		}
 	}
 
-	g := guard.New(llm.NewMulti(names, providers, providerPrompts, patternRedactors, entropyRedactors, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, cacheMaxSize, debugOut)
+	g := guard.New(llm.NewMulti(names, providers, providerPrompts, patternRedactors, entropyRedactors, providerCache, debugOut), defaultPrompt, config.Dir(), cfg.CommandWhitelist, debugOut)
 
 	timeout := cfg.TimeoutSeconds
 	if timeout <= 0 {
