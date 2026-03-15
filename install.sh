@@ -43,10 +43,14 @@ echo ""
 # --- Config ---
 mkdir -p "$CONFIG_DIR"
 
-cp "$INSTALL_DIR/config.default.yaml" "$CONFIG_FILE"
-chmod 600 "$CONFIG_FILE"
-echo "Config created: $CONFIG_FILE"
-echo "Edit it and set your api_key before using guard-sh."
+if [[ -f "$CONFIG_FILE" ]]; then
+    echo "Config already exists, skipping: $CONFIG_FILE"
+else
+    cp "$INSTALL_DIR/config.default.yaml" "$CONFIG_FILE"
+    chmod 600 "$CONFIG_FILE"
+    echo "Config created: $CONFIG_FILE"
+    echo "Edit it and set your api_key before using guard-sh."
+fi
 
 cp "$INSTALL_DIR/prompt.txt" "$CONFIG_DIR/prompt.txt"
 echo "Prompt copied: $CONFIG_DIR/prompt.txt (edit to customize)"
