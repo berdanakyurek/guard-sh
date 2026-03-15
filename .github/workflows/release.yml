@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 jobs:
   release:
@@ -13,15 +12,29 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
+      - name: Bump version
+        id: version
+        run: |
+          LATEST=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          if [ -z "$LATEST" ]; then
+            NEXT="v0.1.0"
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "${LATEST#v}"
+            NEXT="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+
       - name: Build binaries
         run: |
-          VERSION=${{ github.ref_name }}
+          VERSION=${{ steps.version.outputs.version }}
           LDFLAGS="-X main.version=${VERSION}"
 
           GOOS=linux  GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o guard-sh-linux-amd64  .
@@ -32,6 +45,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
           files: |
             guard-sh-linux-amd64
             guard-sh-linux-arm64
