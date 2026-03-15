@@ -3,6 +3,19 @@
 _GUARD_SCRIPT_PATH="${${(%):-%x}:A}"
 
 _guard_zsh_accept_line() {
+    # $CONTEXT is 'cont' when zsh is waiting for more input (open quotes,
+    # backslash continuation, open braces, if/for/while bodies, etc.).
+    # Pass through so zsh can collect the rest of the command; we will
+    # intercept the final Enter when $CONTEXT returns to 'start'.
+    if [[ "$CONTEXT" == "cont" ]]; then
+        zle .accept-line
+        return
+    fi
+
+    # Expand history references (!! !$ !cmd etc.) before checking, so
+    # guard-sh evaluates the command that will actually run, not the token.
+    zle .expand-history
+
     local cmd="$BUFFER"
 
     if [[ -z "${cmd//[[:space:]]/}" ]]; then
