@@ -48,25 +48,31 @@ func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string
 			prompt = override
 		}
 		cmd := command
+
+		patStatus := fmt.Sprintf("%s○ off%s", dbgDim, dbgReset)
 		if pr, ok := m.patternRedactors[name]; ok && pr != nil {
+			patStatus = fmt.Sprintf("%s● on%s", dbgGreen, dbgReset)
 			cmd = pr.Redact(cmd)
 		}
-		if er, ok := m.entropyRedactors[name]; ok && er != nil {
-			cmd = er.Redact(cmd)
+		if m.debug != nil {
+			if cmd != command {
+				fmt.Fprintf(m.debug, "  %s%-10s%s  pattern %s  %s→ %q%s\n", dbgCyan, name, dbgReset, patStatus, dbgDim, cmd, dbgReset)
+			} else {
+				fmt.Fprintf(m.debug, "  %s%-10s%s  pattern %s  %sunchanged%s\n", dbgCyan, name, dbgReset, patStatus, dbgDim, dbgReset)
+			}
 		}
 
+		afterPattern := cmd
+		entStatus := fmt.Sprintf("%s○ off%s", dbgDim, dbgReset)
+		if er, ok := m.entropyRedactors[name]; ok && er != nil {
+			entStatus = fmt.Sprintf("%s● on%s", dbgGreen, dbgReset)
+			cmd = er.Redact(cmd)
+		}
 		if m.debug != nil {
-			patStatus := fmt.Sprintf("%s○ off%s", dbgDim, dbgReset)
-			if _, ok := m.patternRedactors[name]; ok {
-				patStatus = fmt.Sprintf("%s● on%s", dbgGreen, dbgReset)
-			}
-			entStatus := fmt.Sprintf("%s○ off%s", dbgDim, dbgReset)
-			if _, ok := m.entropyRedactors[name]; ok {
-				entStatus = fmt.Sprintf("%s● on%s", dbgGreen, dbgReset)
-			}
-			fmt.Fprintf(m.debug, "  %s%-10s%s  pattern %s  entropy %s\n", dbgCyan, name, dbgReset, patStatus, entStatus)
-			if cmd != command {
-				fmt.Fprintf(m.debug, "  %s            → %q%s\n", dbgDim, cmd, dbgReset)
+			if cmd != afterPattern {
+				fmt.Fprintf(m.debug, "  %s          %s  entropy %s  %s→ %q%s\n", dbgCyan, dbgReset, entStatus, dbgDim, cmd, dbgReset)
+			} else {
+				fmt.Fprintf(m.debug, "  %s          %s  entropy %s  %sunchanged%s\n", dbgCyan, dbgReset, entStatus, dbgDim, dbgReset)
 			}
 		}
 
