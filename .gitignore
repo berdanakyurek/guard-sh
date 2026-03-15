@@ -1,3 +1,4 @@
 guard-sh
 .claude/
 .claude-identity
+.github-app-private-key.pem

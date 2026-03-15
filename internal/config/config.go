@@ -11,10 +11,11 @@ import (
 )
 
 type ProviderConfig struct {
-	APIKey                      string `yaml:"api_key"`
-	Model                       string `yaml:"model"`
-	Host                        string `yaml:"host"`
+	APIKey                       string `yaml:"api_key"`
+	Model                        string `yaml:"model"`
+	Host                         string `yaml:"host"`
 	PatternBasedRedactionEnabled *bool  `yaml:"pattern_based_redaction_enabled"`
+	EntropyRedactEnabled         *bool  `yaml:"entropy_redaction_enabled"`
 }
 
 // RedactionEnabled returns whether pattern-based redaction is enabled for this provider.
@@ -26,14 +27,25 @@ func (p *ProviderConfig) RedactionEnabled() bool {
 	return *p.PatternBasedRedactionEnabled
 }
 
+// EntropyRedactionEnabled returns whether entropy-based redaction is enabled for this provider.
+// Defaults to false if not explicitly set.
+func (p *ProviderConfig) EntropyRedactionEnabled() bool {
+	if p == nil || p.EntropyRedactEnabled == nil {
+		return false
+	}
+	return *p.EntropyRedactEnabled
+}
+
 type Config struct {
-	ProviderOrder    []string                   `yaml:"provider_order"`
-	Providers        map[string]*ProviderConfig `yaml:"providers"`
-	TimeoutSeconds   int                        `yaml:"timeout_seconds"`
-	CacheEnabled     *bool                      `yaml:"cache_enabled"`
-	CacheMaxSize     int                        `yaml:"cache_max_size"`
-	CommandWhitelist []string                   `yaml:"command_whitelist"`
-	RedactPatterns   []string                   `yaml:"redact_patterns"`
+	ProviderOrder      []string                   `yaml:"provider_order"`
+	Providers          map[string]*ProviderConfig `yaml:"providers"`
+	TimeoutSeconds     int                        `yaml:"timeout_seconds"`
+	CacheEnabled       *bool                      `yaml:"cache_enabled"`
+	CacheMaxSize       int                        `yaml:"cache_max_size"`
+	CommandWhitelist   []string                   `yaml:"command_whitelist"`
+	RedactPatterns     []string                   `yaml:"redact_patterns"`
+	EntropyThreshold   float64                    `yaml:"entropy_threshold"`
+	EntropyMinLength   int                        `yaml:"entropy_min_length"`
 }
 
 func (c *Config) Get(name string) (*ProviderConfig, error) {
@@ -409,6 +421,39 @@ func UpdateProviderRedaction(name string, enabled bool) error {
 	}
 
 	// Insert at end of block
+	result := make([]string, 0, len(lines)+1)
+	result = append(result, lines[:end]...)
+	result = append(result, newLine)
+	result = append(result, lines[end:]...)
+	return os.WriteFile(cfgPath, []byte(strings.Join(result, "\n")), 0600)
+}
+
+// UpdateProviderEntropyRedaction sets entropy_redaction_enabled for a specific provider.
+func UpdateProviderEntropyRedaction(name string, enabled bool) error {
+	cfgPath := filepath.Join(Dir(), "config.yaml")
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", cfgPath)
+	}
+	lines := strings.Split(string(data), "\n")
+	start, end := findProviderBlock(lines, name)
+	if start < 0 {
+		return fmt.Errorf("provider %q not found in config", name)
+	}
+
+	val := "true"
+	if !enabled {
+		val = "false"
+	}
+	newLine := "    entropy_redaction_enabled: " + val
+
+	for i := start + 1; i < end; i++ {
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "entropy_redaction_enabled:") {
+			lines[i] = newLine
+			return os.WriteFile(cfgPath, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+
 	result := make([]string, 0, len(lines)+1)
 	result = append(result, lines[:end]...)
 	result = append(result, newLine)
