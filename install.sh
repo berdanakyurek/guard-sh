@@ -52,8 +52,12 @@ else
     echo "Edit it and set your api_key before using guard-sh."
 fi
 
-cp "$INSTALL_DIR/prompt.txt" "$CONFIG_DIR/prompt.txt"
-echo "Prompt copied: $CONFIG_DIR/prompt.txt (edit to customize)"
+if [[ -f "$CONFIG_DIR/prompt.txt" ]]; then
+    echo "Prompt already exists, skipping: $CONFIG_DIR/prompt.txt"
+else
+    cp "$INSTALL_DIR/prompt.txt" "$CONFIG_DIR/prompt.txt"
+    echo "Prompt created: $CONFIG_DIR/prompt.txt (edit to customize)"
+fi
 
 echo ""
 
