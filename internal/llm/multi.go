@@ -50,31 +50,37 @@ func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string
 		cmd := command
 		if pr, ok := m.patternRedactors[name]; ok && pr != nil {
 			cmd = pr.Redact(cmd)
-			if m.debug != nil && cmd != command {
-				fmt.Fprintf(m.debug, "  %sredact (pattern)%s  %s→ %q%s\n", dbgDim, dbgReset, dbgDim, cmd, dbgReset)
-			}
 		}
 		if er, ok := m.entropyRedactors[name]; ok && er != nil {
-			before := cmd
 			cmd = er.Redact(cmd)
-			if m.debug != nil && cmd != before {
-				fmt.Fprintf(m.debug, "  %sredact (entropy)%s  %s→ %q%s\n", dbgDim, dbgReset, dbgDim, cmd, dbgReset)
+		}
+
+		if m.debug != nil {
+			patStatus := fmt.Sprintf("%s○ off%s", dbgDim, dbgReset)
+			if _, ok := m.patternRedactors[name]; ok {
+				patStatus = fmt.Sprintf("%s● on%s", dbgGreen, dbgReset)
+			}
+			entStatus := fmt.Sprintf("%s○ off%s", dbgDim, dbgReset)
+			if _, ok := m.entropyRedactors[name]; ok {
+				entStatus = fmt.Sprintf("%s● on%s", dbgGreen, dbgReset)
+			}
+			fmt.Fprintf(m.debug, "  %s%-10s%s  pattern %s  entropy %s\n", dbgCyan, name, dbgReset, patStatus, entStatus)
+			if cmd != command {
+				fmt.Fprintf(m.debug, "  %s            → %q%s\n", dbgDim, cmd, dbgReset)
 			}
 		}
-		if m.debug != nil {
-			fmt.Fprintf(m.debug, "  %s%-10s%s", dbgCyan, name, dbgReset)
-		}
+
 		start := time.Now()
 		result, err := p.Query(ctx, prompt, cmd)
 		elapsed := time.Since(start).Milliseconds()
 		if err == nil {
 			if m.debug != nil {
-				fmt.Fprintf(m.debug, "  %s✓ ok%s %s(%dms)%s\n", dbgGreen, dbgReset, dbgDim, elapsed, dbgReset)
+				fmt.Fprintf(m.debug, "  %s            ✓ ok %s(%dms)%s\n", dbgGreen, dbgDim, elapsed, dbgReset)
 			}
 			return result, nil
 		}
 		if m.debug != nil {
-			fmt.Fprintf(m.debug, "  %s✗ %s%s %s(%dms), trying next%s\n", dbgRed, err.Error(), dbgReset, dbgDim, elapsed, dbgReset)
+			fmt.Fprintf(m.debug, "  %s            ✗ %s %s(%dms), trying next%s\n", dbgRed, err.Error(), dbgDim, elapsed, dbgReset)
 		}
 	}
 	return "", errors.New("all providers failed")
