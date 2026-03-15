@@ -48,7 +48,7 @@ git push https://x-access-token:${TOKEN}@github.com/${GITHUB_REPO}.git HEAD
 
 ## What This Project Does
 
-**guard-sh** is a shell safety layer. It hooks into bash/zsh to intercept commands before execution, queries an LLM to assess risk, and prompts the user for confirmation if the command is deemed risky. Safe commands are whitelisted or cached to skip the LLM call.
+**guard-sh** is a shell safety layer. It hooks into bash/zsh/fish to intercept commands before execution, queries an LLM to assess risk, and prompts the user for confirmation if the command is deemed risky. Safe commands are whitelisted or cached to skip the LLM call.
 
 ## Commands
 
@@ -76,7 +76,7 @@ There is no Makefile.
 ```
 guard-sh on / off                   enable/disable for current session (handled by shell hook)
 guard-sh on --global / off --global   auto-enable/disable in every new terminal
-guard-sh status                 show session/global state, config, timeout, cache, providers, whitelist
+guard-sh status                 show session/global state, config, timeout, work dir, cache, providers, whitelist
 guard-sh check "<cmd>"          core check — exit 0 if safe, exit 1 with warning if risky
 guard-sh check "<cmd>" --debug  trace whitelist hit, cache hit, provider attempts, LLM response
 guard-sh healthcheck            validate API keys, models, latency, shell integration
@@ -102,9 +102,10 @@ guard-sh version                print version
 
 ```
 shell command typed
-  → shell hook (shell/guard.bash or shell/guard.zsh)
+  → shell hook (shell/guard.bash or shell/guard.zsh or shell/guard.fish)
   → guard-sh check <command>
-  → internal/guard: whitelist check → cache check → LLM query
+  → main.go: prepend "Working directory: <wd>\nCommand: " if send_working_directory is enabled
+  → internal/guard: whitelist check (rawCmd) → cache check → LLM query (with WD prefix)
   → internal/llm/multi.go: try each provider in order, first success wins
   → response printed; shell prompts [Y/n] if not "OK"
 ```
@@ -121,8 +122,9 @@ shell command typed
 ### Shell integration
 
 - **Bash**: `DEBUG` trap with `extdebug` — intercepts before execution
-- **Zsh**: custom widget bound to `^M`/`^J` (Enter key)
-- Both call `guard-sh check` and check exit code: 0 = allow, 1 = block
+- **Zsh**: custom widget bound to `^M`/`^J` (Enter key); handles multiline (`$CONTEXT == "cont"`) and history expansion
+- **Fish**: `bind \n`/`bind \r` mapped to `_guard_execute`; uses `commandline` widget
+- All call `guard-sh check` and check exit code: 0 = allow, 1 = block
 
 ### System prompt
 
@@ -132,4 +134,13 @@ Provider-specific prompts can be placed at `~/.config/guard-sh/prompt_PROVIDERNA
 
 ### Runtime config location
 
-`~/.config/guard-sh/config.yaml` — providers, API keys, whitelist, cache settings, timeout. See `config.default.yaml` (embedded in binary) for all options.
+`~/.config/guard-sh/config.yaml` — providers, API keys, whitelist, cache settings, timeout, `send_working_directory`. See `config.default.yaml` (embedded in binary) for all options.
+
+### Working directory context
+
+When `send_working_directory: true` (default), `main.go` reads `os.Getwd()` and builds:
+```
+Working directory: /path/to/cwd
+Command: <cmd>
+```
+This is passed as the `query` to `g.Check(ctx, rawCmd, query)`. The `rawCmd` (bare command) is used for whitelist matching only.

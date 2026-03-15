@@ -163,6 +163,33 @@ func TestCheck_DefaultPrompt(t *testing.T) {
 	}
 }
 
+func TestCheck_QuerySentToLLM(t *testing.T) {
+	var receivedCmd string
+	p := &capturingProvider{onQuery: func(_, cmd string) { receivedCmd = cmd }}
+	g := New(p, "", t.TempDir(), nil, 0, nil)
+
+	rawCmd := "rm -rf /"
+	query := "Working directory: /etc\nCommand: rm -rf /"
+	g.Check(context.Background(), rawCmd, query)
+
+	if receivedCmd != query {
+		t.Errorf("expected LLM to receive query %q, got %q", query, receivedCmd)
+	}
+}
+
+func TestCheck_WhitelistUsesRawCmd(t *testing.T) {
+	called := false
+	p := &countingProvider{response: "OK", onCall: func() { called = true }}
+	g := New(p, "", t.TempDir(), []string{"ls"}, 0, nil)
+
+	// rawCmd is whitelisted but query includes WD prefix — should still be whitelisted
+	g.Check(context.Background(), "ls", "Working directory: /home/user\nCommand: ls")
+
+	if called {
+		t.Error("expected provider not called for whitelisted rawCmd")
+	}
+}
+
 type countingProvider struct {
 	response string
 	onCall   func()

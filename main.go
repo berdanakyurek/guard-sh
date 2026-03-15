@@ -89,6 +89,9 @@ func runStatus(args []string) {
 	}
 	fmt.Printf("  %s  %s%ds%s\n", label("timeout "), dim, timeout, reset)
 
+	wdEnabled := cfg.IsSendWorkingDirectoryEnabled()
+	fmt.Printf("  %s  %s\n", label("work dir"), statusBadge(map[bool]string{true: "on", false: "off"}[wdEnabled]))
+
 	cacheEnabled := cfg.CacheEnabled == nil || *cfg.CacheEnabled
 	cacheMaxSize := cfg.CacheMaxSize
 	if cacheMaxSize <= 0 {

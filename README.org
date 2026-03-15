@@ -132,6 +132,12 @@ command_whitelist:
 # How long to wait for an LLM response, in seconds. Defaults to 10 if not set.
 timeout_seconds: 10
 
+# Include the working directory in the command sent to the LLM.
+# Allows the LLM to assess risk based on context (e.g. chmod in /etc vs ~/projects).
+# Cache keys include the working directory when this is enabled.
+# Set to false to send only the command string.
+send_working_directory: true
+
 # Cache LLM responses to avoid repeated API calls for the same command.
 cache_enabled: true
 cache_max_size: 1000
@@ -140,6 +146,27 @@ cache_max_size: 1000
 ** Custom prompt
 
 The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
+
+** Working directory context
+
+By default, guard-sh includes the current working directory when querying the LLM. This gives the LLM context to make better decisions — for example, =chmod 777 config.yaml= in =/etc= is riskier than in =~/projects/=.
+
+The LLM receives a structured two-line query:
+
+#+begin_example
+Working directory: /etc
+Command: chmod 777 config.yaml
+#+end_example
+
+The working directory is also included in cache keys, so the same command in different directories is evaluated independently.
+
+To disable:
+
+#+begin_src yaml
+send_working_directory: false
+#+end_src
+
+Or via config file: set =send_working_directory: false= under the root level.
 
 ** Redaction
   :PROPERTIES:
@@ -317,6 +344,7 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
   config    ~/.config/guard-sh/config.yaml
   prompt    ~/.config/guard-sh/prompt.txt
   timeout   10s
+  work dir  ● on
   cache     ● on
             1000 max entries
             42 entries, 8.3 KB
