@@ -30,6 +30,7 @@ Commands in your *whitelist* skip the LLM entirely.
   - DeepSeek ([[https://platform.deepseek.com]])
   - OpenAI ([[https://platform.openai.com]])
   - Claude ([[https://console.anthropic.com]])
+  - Ollama (local, no API key required — [[https://ollama.com]])
 
 * Requirements
   :PROPERTIES:
@@ -38,7 +39,7 @@ Commands in your *whitelist* skip the LLM entirely.
 
 - Go 1.22+
 - bash or zsh
-- API key(s) for one or more of the LLMs listed under the [[#supported-llms][Supported LLMs]] section.
+- API key(s) for one or more of the cloud LLMs listed above, *or* a running [[https://ollama.com][Ollama]] instance for fully local operation.
 
 * Installation
   :PROPERTIES:
@@ -94,21 +95,25 @@ An example config file is as follows:
 #+begin_src yaml
 # Providers are tried in order. If one fails, the next is used.
 provider_order:
-  - openai
+  - ollama
   - gemini
   - deepseek
+  - openai
   - claude
 
 providers:
-  openai:
-    api_key: YOUR_OPENAI_KEY
-    model: gpt-4o-mini                    # optional, this is the default
+  ollama:
+    host: http://localhost:11434/api/chat # optional, this is the default
+    model: llama3.2                       # optional, this is the default
   gemini:
     api_key: YOUR_GEMINI_KEY
     model: gemini-3.1-flash-lite-preview  # optional, this is the default
   deepseek:
     api_key: YOUR_DEEPSEEK_KEY
     model: deepseek-chat                  # optional, this is the default
+  openai:
+    api_key: YOUR_OPENAI_KEY
+    model: gpt-4o-mini                    # optional, this is the default
   claude:
     api_key: YOUR_ANTHROPIC_KEY
     model: claude-haiku-4-5-20251001      # optional, this is the default
@@ -297,7 +302,7 @@ guard-sh provider remove   # interactively remove a provider
 guard-sh provider order    # interactively reorder providers
 #+end_src
 
-~provider add~ walks you through selecting a provider, picking a model, and entering an API key. The provider is saved to your config and added to ~provider_order~ automatically.
+~provider add~ walks you through selecting a provider, picking a model, and entering an API key (or a full chat endpoint URL for Ollama, e.g. ~http://localhost:11434/api/chat~). The provider is saved to your config and added to ~provider_order~ automatically.
 
 ~provider remove~ lists your configured providers and removes the one you select.
 

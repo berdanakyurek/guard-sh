@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -165,7 +166,7 @@ func runProviderAdd() {
 
 	// Step 1: select provider
 	fmt.Printf("\n  %sprovider%s\n\n", bold, reset)
-	names := []string{"gemini", "claude", "openai", "deepseek"}
+	names := []string{"gemini", "claude", "openai", "deepseek", "ollama"}
 
 	cfg, _ := config.Load()
 	configured := map[string]bool{}
@@ -188,38 +189,70 @@ func runProviderAdd() {
 	}
 	name := names[choice-1]
 
-	// Step 2: API key — validate by fetching models, retry on auth error
-	fmt.Printf("\n  %sapi key%s %s(%s)%s\n\n", bold, reset, dim, name, reset)
-	var apiKey string
+	// Step 2: API key (or host for ollama) — validate by fetching models
+	var apiKey, host string
 	var models []string
-	for {
-		fmt.Printf("  %s>%s ", dim, reset)
-		line, _ := reader.ReadString('\n')
-		apiKey = strings.TrimSpace(line)
-		if apiKey == "" {
-			fmt.Printf("  %s✗ api key cannot be empty%s\n\n", red, reset)
-			continue
-		}
 
-		fmt.Printf("  %svalidating...%s", dim, reset)
-		fetched, fetchErr := fetchModels(name, apiKey)
-		fmt.Printf("\r%s\r", strings.Repeat(" ", 30))
+	if name == "ollama" {
+		fmt.Printf("\n  %surl%s %s(default: %s)%s\n\n", bold, reset, dim, config.DefaultHost("ollama"), reset)
+		for {
+			fmt.Printf("  %s> (ENTER for default)  %s", dim, reset)
+			line, _ := reader.ReadString('\n')
+			host = strings.TrimSpace(line)
+			if host == "" {
+				host = config.DefaultHost("ollama")
+			}
+			if !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
+				host = "http://" + host
+			}
 
-		if fetchErr != nil {
-			if isAuthError(fetchErr) {
-				fmt.Printf("  %s✗ invalid API key, try again%s\n\n", red, reset)
+			fmt.Printf("  %sconnecting...%s", dim, reset)
+			fetched, fetchErr := fetchModels(name, host)
+			fmt.Printf("\r%s\r", strings.Repeat(" ", 30))
+
+			if fetchErr != nil {
+				fmt.Printf("  %s✗ could not reach ollama (%s), try again%s\n\n", red, fetchErr.Error(), reset)
 				continue
 			}
-			// Non-auth error (network, etc.) — fall back to hard-coded list
-			fmt.Printf("  %s⚠ could not fetch models (%s), using default list%s\n", red, fetchErr.Error(), reset)
-			models = providerModelsFallback[name]
-		} else if len(fetched) == 0 {
-			fmt.Printf("  %s⚠ no models returned, using default list%s\n", dim, reset)
-			models = providerModelsFallback[name]
-		} else {
-			models = fetched
+			if len(fetched) == 0 {
+				fmt.Printf("  %s⚠ no models found, using default list%s\n", dim, reset)
+				models = providerModelsFallback[name]
+			} else {
+				models = fetched
+			}
+			break
 		}
-		break
+	} else {
+		fmt.Printf("\n  %sapi key%s %s(%s)%s\n\n", bold, reset, dim, name, reset)
+		for {
+			fmt.Printf("  %s>%s ", dim, reset)
+			line, _ := reader.ReadString('\n')
+			apiKey = strings.TrimSpace(line)
+			if apiKey == "" {
+				fmt.Printf("  %s✗ api key cannot be empty%s\n\n", red, reset)
+				continue
+			}
+
+			fmt.Printf("  %svalidating...%s", dim, reset)
+			fetched, fetchErr := fetchModels(name, apiKey)
+			fmt.Printf("\r%s\r", strings.Repeat(" ", 30))
+
+			if fetchErr != nil {
+				if isAuthError(fetchErr) {
+					fmt.Printf("  %s✗ invalid API key, try again%s\n\n", red, reset)
+					continue
+				}
+				// Non-auth error (network, etc.) — fall back to hard-coded list
+				fmt.Printf("  %s⚠ could not fetch models (%s), using default list%s\n", red, fetchErr.Error(), reset)
+				models = providerModelsFallback[name]
+			} else if len(fetched) == 0 {
+				fmt.Printf("  %s⚠ no models returned, using default list%s\n", dim, reset)
+				models = providerModelsFallback[name]
+			} else {
+				models = fetched
+			}
+			break
+		}
 	}
 
 	// Step 4: select model
@@ -255,8 +288,14 @@ func runProviderAdd() {
 	}
 
 	// Step 5: save
-	if err := config.AddProvider(name, apiKey, model); err != nil {
-		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+	var saveErr error
+	if name == "ollama" {
+		saveErr = config.AddOllamaProvider(host, model)
+	} else {
+		saveErr = config.AddProvider(name, apiKey, model)
+	}
+	if saveErr != nil {
+		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", saveErr)
 		os.Exit(1)
 	}
 
@@ -320,6 +359,7 @@ var providerModelsFallback = map[string][]string{
 	"claude":   {"claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-6"},
 	"openai":   {"gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "o1-mini"},
 	"deepseek": {"deepseek-chat", "deepseek-reasoner"},
+	"ollama":   {"llama3.2", "llama3.1", "mistral", "gemma3", "phi4"},
 }
 
 func isAuthError(err error) bool {
@@ -327,19 +367,23 @@ func isAuthError(err error) bool {
 	return strings.Contains(s, "HTTP 400") || strings.Contains(s, "HTTP 401") || strings.Contains(s, "HTTP 403")
 }
 
-func fetchModels(name, apiKey string) ([]string, error) {
+// fetchModels fetches available models for a provider.
+// For ollama, the second argument is the host URL instead of an API key.
+func fetchModels(name, apiKeyOrHost string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	hc := &http.Client{Timeout: 10 * time.Second}
 	switch name {
 	case "gemini":
-		return fetchGeminiModels(ctx, hc, apiKey)
+		return fetchGeminiModels(ctx, hc, apiKeyOrHost)
 	case "claude":
-		return fetchClaudeModels(ctx, hc, apiKey)
+		return fetchClaudeModels(ctx, hc, apiKeyOrHost)
 	case "openai":
-		return fetchOpenAIModels(ctx, hc, apiKey)
+		return fetchOpenAIModels(ctx, hc, apiKeyOrHost)
 	case "deepseek":
-		return fetchDeepSeekModels(ctx, hc, apiKey)
+		return fetchDeepSeekModels(ctx, hc, apiKeyOrHost)
+	case "ollama":
+		return fetchOllamaModels(ctx, hc, apiKeyOrHost)
 	}
 	return nil, fmt.Errorf("unknown provider")
 }
@@ -433,6 +477,41 @@ func fetchOpenAIModels(ctx context.Context, hc *http.Client, apiKey string) ([]s
 		}
 	}
 	sort.Strings(models)
+	return models, nil
+}
+
+func ollamaBase(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	return u.Scheme + "://" + u.Host
+}
+
+func fetchOllamaModels(ctx context.Context, hc *http.Client, rawURL string) ([]string, error) {
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, ollamaBase(rawURL)+"/api/tags", nil)
+	resp, err := hc.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, apiError(resp)
+	}
+	var result struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	models := make([]string, 0, len(result.Models))
+	for _, m := range result.Models {
+		// Strip ":latest" suffix for cleaner display
+		name := strings.TrimSuffix(m.Name, ":latest")
+		models = append(models, name)
+	}
 	return models, nil
 }
 

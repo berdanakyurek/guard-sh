@@ -27,6 +27,29 @@ go vet ./...
 
 There is no Makefile.
 
+## CLI subcommands
+
+```
+guard-sh on / off                   enable/disable for current session (handled by shell hook)
+guard-sh on --global / off --global   auto-enable/disable in every new terminal
+guard-sh status                 show session/global state, config, timeout, cache, providers, whitelist
+guard-sh check "<cmd>"          core check — exit 0 if safe, exit 1 with warning if risky
+guard-sh check "<cmd>" --debug  trace whitelist hit, cache hit, provider attempts, LLM response
+guard-sh healthcheck            validate API keys, models, latency, shell integration
+guard-sh provider add           interactive: pick provider, enter API key, pick model
+guard-sh provider remove        interactive: remove a configured provider
+guard-sh provider order         interactive TUI: reorder providers with arrow keys
+guard-sh whitelist              list all whitelisted commands
+guard-sh whitelist add <cmd>    add a command (LLM never called for it)
+guard-sh whitelist remove <cmd> remove a command from the whitelist
+guard-sh cache on/off           enable/disable response caching
+guard-sh cache size <n>         set max cached entries
+guard-sh cache clear            delete all cached responses
+guard-sh setup                  create config dir, write shell scripts, add shell integration to rc
+guard-sh help                   print all commands with descriptions
+guard-sh version                print version
+```
+
 ## Architecture
 
 ### Request flow
@@ -44,7 +67,7 @@ shell command typed
 
 - **`internal/guard/`** — core logic: whitelist matching, cache lookup, LLM dispatch, command parsing (handles `&&`, `||`, `;`, `|`, subshells, variable assignments)
 - **`internal/llm/multi.go`** — tries providers in `provider_order` config; fails open (allows command) if all fail
-- **`internal/llm/{claude,gemini,openai,deepseek}/`** — one file per provider, each makes HTTP POST to its API; all implement the same `Provider` interface
+- **`internal/llm/{claude,gemini,openai,deepseek,ollama}/`** — one file per provider, each makes HTTP POST to its API; all implement the same `Provider` interface. Ollama uses `host` instead of `api_key` and hits a local endpoint (`/api/chat`).
 - **`internal/cache/`** — LRU cache persisted to `~/.config/guard-sh/cache.json`
 - **`internal/config/`** — YAML config loader from `~/.config/guard-sh/config.yaml`
 

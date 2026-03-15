@@ -13,6 +13,7 @@ import (
 type ProviderConfig struct {
 	APIKey string `yaml:"api_key"`
 	Model  string `yaml:"model"`
+	Host   string `yaml:"host"`
 }
 
 type Config struct {
@@ -29,11 +30,14 @@ func (c *Config) Get(name string) (*ProviderConfig, error) {
 	if !ok {
 		return nil, fmt.Errorf("provider %q not found in config", name)
 	}
-	if p.APIKey == "" {
+	if p.APIKey == "" && name != "ollama" {
 		return nil, fmt.Errorf("api_key is not set for provider %q", name)
 	}
 	if p.Model == "" {
 		p.Model = DefaultModel(name)
+	}
+	if p.Host == "" {
+		p.Host = DefaultHost(name)
 	}
 	return p, nil
 }
@@ -359,7 +363,74 @@ func DefaultModel(provider string) string {
 		return "gpt-4o-mini"
 	case "deepseek":
 		return "deepseek-chat"
+	case "ollama":
+		return "llama3.2"
 	default:
 		return ""
 	}
+}
+
+func DefaultHost(provider string) string {
+	switch provider {
+	case "ollama":
+		return "http://localhost:11434/api/chat"
+	default:
+		return ""
+	}
+}
+
+// AddOllamaProvider adds or updates the ollama provider entry in config (full URL + model, no api_key).
+func AddOllamaProvider(host, model string) error {
+	cfgPath := filepath.Join(Dir(), "config.yaml")
+	data, err := os.ReadFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("config not found at %s", cfgPath)
+	}
+	lines := strings.Split(string(data), "\n")
+	lines = addToProviderOrder(lines, "ollama")
+	lines = upsertOllamaBlock(lines, host, model)
+	return os.WriteFile(cfgPath, []byte(strings.Join(lines, "\n")), 0600)
+}
+
+func upsertOllamaBlock(lines []string, host, model string) []string {
+	start, end := findProviderBlock(lines, "ollama")
+	newBlock := []string{
+		"  ollama:",
+		"    host: " + host,
+		"    model: " + model,
+	}
+	if start >= 0 {
+		result := make([]string, 0, len(lines))
+		result = append(result, lines[:start]...)
+		result = append(result, newBlock...)
+		result = append(result, lines[end:]...)
+		return result
+	}
+	// Insert at end of providers section
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "providers:" || strings.HasPrefix(trimmed, "providers:") {
+			if trimmed != "providers:" {
+				lines[i] = "providers:"
+			}
+			j := i + 1
+			for j < len(lines) {
+				l := lines[j]
+				if l != "" && !strings.HasPrefix(l, " ") {
+					break
+				}
+				j++
+			}
+			for j > i+1 && strings.TrimSpace(lines[j-1]) == "" {
+				j--
+			}
+			insert := append([]string{""}, newBlock...)
+			result := make([]string, 0, len(lines)+len(insert))
+			result = append(result, lines[:j]...)
+			result = append(result, insert...)
+			result = append(result, lines[j:]...)
+			return result
+		}
+	}
+	return lines
 }
