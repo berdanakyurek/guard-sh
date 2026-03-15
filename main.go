@@ -35,6 +35,9 @@ var shellBash string
 //go:embed shell/guard.zsh
 var shellZsh string
 
+//go:embed shell/guard.fish
+var shellFish string
+
 var version = "dev"
 
 const (

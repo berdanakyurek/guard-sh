@@ -48,7 +48,7 @@ git push https://x-access-token:${TOKEN}@github.com/${GITHUB_REPO}.git HEAD
 
 ## What This Project Does
 
-**guard-sh** is a shell safety layer. It hooks into bash/zsh to intercept commands before execution, queries an LLM to assess risk, and prompts the user for confirmation if the command is deemed risky. Safe commands are whitelisted or cached to skip the LLM call.
+**guard-sh** is a shell safety layer. It hooks into bash/zsh/fish to intercept commands before execution, queries an LLM to assess risk, and prompts the user for confirmation if the command is deemed risky. Safe commands are whitelisted or cached to skip the LLM call.
 
 ## Commands
 
@@ -102,7 +102,7 @@ guard-sh version                print version
 
 ```
 shell command typed
-  → shell hook (shell/guard.bash or shell/guard.zsh)
+  → shell hook (shell/guard.bash or shell/guard.zsh or shell/guard.fish)
   → guard-sh check <command>
   → internal/guard: whitelist check → cache check → LLM query
   → internal/llm/multi.go: try each provider in order, first success wins
@@ -121,8 +121,9 @@ shell command typed
 ### Shell integration
 
 - **Bash**: `DEBUG` trap with `extdebug` — intercepts before execution
-- **Zsh**: custom widget bound to `^M`/`^J` (Enter key)
-- Both call `guard-sh check` and check exit code: 0 = allow, 1 = block
+- **Zsh**: custom widget bound to `^M`/`^J` (Enter key); handles multiline (`$CONTEXT == "cont"`) and history expansion
+- **Fish**: `bind \n`/`bind \r` mapped to `_guard_execute`; uses `commandline` widget
+- All call `guard-sh check` and check exit code: 0 = allow, 1 = block
 
 ### System prompt
 
