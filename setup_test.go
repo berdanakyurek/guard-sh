@@ -149,8 +149,36 @@ func TestSetup_ShellIntegration_SourcePresent_OnMissing(t *testing.T) {
 	}
 }
 
-func TestSetup_UnsupportedShell_NoRcWritten(t *testing.T) {
+func TestSetup_FreshInstall_Fish(t *testing.T) {
 	xdg, home := setupEnv(t, "/bin/fish")
+	dir := xdg + "/guard-sh"
+
+	runSetup()
+
+	if _, err := os.Stat(filepath.Join(dir, "guard.fish")); err != nil {
+		t.Errorf("guard.fish not created: %v", err)
+	}
+
+	rc := readFile(t, filepath.Join(xdg, "fish", "config.fish"))
+	fishScript := filepath.Join(dir, "guard.fish")
+	if !strings.Contains(rc, `source "`+fishScript+`"`) {
+		t.Error("config.fish missing correct source line")
+	}
+	if !strings.Contains(rc, "guard-sh on") {
+		t.Error("config.fish missing guard-sh on")
+	}
+
+	// Other rc files should not be touched
+	for _, name := range []string{".bashrc", ".zshrc"} {
+		path := filepath.Join(home, name)
+		if _, err := os.Stat(path); err == nil {
+			t.Errorf("%s should not have been created for fish shell", name)
+		}
+	}
+}
+
+func TestSetup_UnsupportedShell_NoRcWritten(t *testing.T) {
+	xdg, home := setupEnv(t, "/bin/tcsh")
 
 	runSetup()
 

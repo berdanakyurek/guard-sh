@@ -54,6 +54,12 @@ func runSetup() {
 	}
 	fmt.Printf("  shell     %s%s%s\n", dim, zshScript, reset)
 
+	fishScript := filepath.Join(dir, "guard.fish")
+	if err := os.WriteFile(fishScript, []byte(shellFish), 0644); err != nil {
+		fatalf("could not write guard.fish: %v", err)
+	}
+	fmt.Printf("  shell     %s%s%s\n", dim, fishScript, reset)
+
 	// --- Shell integration ---
 	fmt.Println()
 	shellName := filepath.Base(os.Getenv("SHELL"))
@@ -65,6 +71,13 @@ func runSetup() {
 	case "bash":
 		rcFile = filepath.Join(os.Getenv("HOME"), ".bashrc")
 		scriptPath = bashScript
+	case "fish":
+		xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+		if xdgConfig == "" {
+			xdgConfig = filepath.Join(os.Getenv("HOME"), ".config")
+		}
+		rcFile = filepath.Join(xdgConfig, "fish", "config.fish")
+		scriptPath = fishScript
 	default:
 		fmt.Printf("  %sUnsupported shell: %s%s\n", dim, shellName, reset)
 		fmt.Printf("  %sManually source the appropriate file from %s%s\n", dim, dir, reset)
@@ -74,6 +87,10 @@ func runSetup() {
 
 	sourceLine := `source "` + scriptPath + `"`
 	onLine := "guard-sh on"
+
+	if err := os.MkdirAll(filepath.Dir(rcFile), 0755); err != nil {
+		fatalf("could not create rc dir: %v", err)
+	}
 
 	rcData, _ := os.ReadFile(rcFile)
 	rc := string(rcData)

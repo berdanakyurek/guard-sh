@@ -38,7 +38,7 @@ Commands in your *whitelist* skip the LLM entirely.
   :END:
 
 - Go 1.22+
-- bash or zsh
+- bash, zsh, or fish
 - API key(s) for one or more of the cloud LLMs listed above, *or* a running [[https://ollama.com][Ollama]] instance for fully local operation.
 
 * Installation
@@ -58,7 +58,7 @@ This will:
 - Build the ~guard-sh~ binary and install it to =~/.local/bin/=
 - Copy the default config to =~/.config/guard-sh/config.yaml=
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
-- Add shell integration to your =.bashrc= or =.zshrc=
+- Add shell integration to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish=
 
 ** From binary
 
@@ -69,7 +69,7 @@ chmod +x ~/.local/bin/guard-sh
 guard-sh setup
 #+end_src
 
-This will create the config dir, write the shell integration scripts, and add them to your =.bashrc= / =.zshrc=.
+This will create the config dir, write the shell integration scripts, and add them to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish= depending on your current shell.
 
 ** Install without shell integration
 
@@ -132,6 +132,12 @@ command_whitelist:
 # How long to wait for an LLM response, in seconds. Defaults to 10 if not set.
 timeout_seconds: 10
 
+# Include the working directory in the command sent to the LLM.
+# Allows the LLM to assess risk based on context (e.g. chmod in /etc vs ~/projects).
+# Cache keys include the working directory when this is enabled.
+# Set to false to send only the command string.
+send_working_directory: true
+
 # Cache LLM responses to avoid repeated API calls for the same command.
 cache_enabled: true
 cache_max_size: 1000
@@ -141,51 +147,107 @@ cache_max_size: 1000
 
 The LLM prompt is stored at =~/.config/guard-sh/prompt.txt=. Edit it to adjust what guard-sh considers risky, change the output format, or add your own rules. Changes take effect immediately — no rebuild needed.
 
+** Working directory context
+
+By default, guard-sh includes the current working directory when querying the LLM. This gives the LLM context to make better decisions — for example, =chmod 777 config.yaml= in =/etc= is riskier than in =~/projects/=.
+
+The LLM receives a structured two-line query:
+
+#+begin_example
+Working directory: /etc
+Command: chmod 777 config.yaml
+#+end_example
+
+The working directory is also included in cache keys, so the same command in different directories is evaluated independently.
+
+To disable:
+
+#+begin_src yaml
+send_working_directory: false
+#+end_src
+
+Or via config file: set =send_working_directory: false= under the root level.
+
 ** Redaction
   :PROPERTIES:
   :CUSTOM_ID: redaction
   :END:
 
-guard-sh can redact sensitive values from commands before sending them to any LLM provider. Patterns are Go regular expressions stored in =redact_patterns= in your config. Matches are replaced with =[REDACTED]=.
+guard-sh can redact sensitive values from commands before sending them to any LLM provider. Two methods are supported: pattern-based and Shannon entropy-based. Matches are replaced with =[REDACTED]=.
 
-Default patterns cover common cases:
-
-#+begin_src yaml
-redact_patterns:
-  - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
-  - '(?i)--password\s+\S+'
-  - 'AKIA[0-9A-Z]{16}'
-#+end_src
-
-You can add your own patterns. For example:
+Redaction is configured globally under =redaction:= in your config, and can be overridden per-provider under =providers.NAME.redaction=.
 
 #+begin_src yaml
-redact_patterns:
-  - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
-  - '(?i)--password\s+\S+'
-  - 'AKIA[0-9A-Z]{16}'
-  - 'ghp_[a-zA-Z0-9]{36}'        # GitHub personal access tokens
-  - 'xox[baprs]-[a-zA-Z0-9-]+'   # Slack tokens
+redaction:
+  pattern_based:
+    enabled: true
+    patterns:
+      - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
+      - '(?i)--password\s+\S+'
+      - 'AKIA[0-9A-Z]{16}'
+  shannon_entropy_based:
+    enabled: false
+    threshold: 4.5   # bits/char — typical English ~3.5, secrets typically >4.5
+    min_length: 20   # ignore tokens shorter than this
 #+end_src
 
-Redaction is enabled per provider. The default is on for all providers. Toggle it interactively:
+*** Pattern-based redaction
+
+Uses Go regular expressions. Any token matching a pattern is replaced with =[REDACTED]=. On by default for all providers.
+
+You can add your own patterns:
+
+#+begin_src yaml
+redaction:
+  pattern_based:
+    enabled: true
+    patterns:
+      - '(?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+'
+      - '(?i)--password\s+\S+'
+      - 'AKIA[0-9A-Z]{16}'
+      - 'ghp_[a-zA-Z0-9]{36}'        # GitHub personal access tokens
+      - 'xox[baprs]-[a-zA-Z0-9-]+'   # Slack tokens
+#+end_src
+
+Toggle per-provider:
 
 #+begin_src bash
-guard-sh redact pattern on    # interactively enable pattern redaction for a provider
-guard-sh redact pattern off   # interactively disable pattern redaction for a provider
+guard-sh redact pattern on    # interactively enable for a provider
+guard-sh redact pattern off   # interactively disable for a provider
 #+end_src
 
-Or set it directly in the config:
+*** Shannon entropy-based redaction
+
+Automatically detects high-entropy strings (API keys, random tokens, private key material) without requiring explicit patterns. Any whitespace-delimited token above the entropy threshold is replaced with =[REDACTED]=. Off by default.
+
+Toggle per-provider:
+
+#+begin_src bash
+guard-sh redact entropy on    # interactively enable for a provider
+guard-sh redact entropy off   # interactively disable for a provider
+#+end_src
+
+*** Per-provider overrides
+
+A provider can override any part of the global redaction config:
 
 #+begin_src yaml
 providers:
-  gemini:
-    api_key: YOUR_KEY
-    pattern_based_redaction_enabled: true   # default, can omit
   ollama:
     host: http://localhost:11434/api/chat
-    pattern_based_redaction_enabled: false  # disable for local model
+    redaction:                      # optional — overrides global for this provider
+      pattern_based:
+        enabled: false              # disable pattern redaction for local model
+  gemini:
+    api_key: YOUR_KEY
+    redaction:
+      shannon_entropy_based:
+        enabled: true
+        threshold: 4.0             # more sensitive than global default
+        min_length: 16
 #+end_src
+
+Fields not specified in the per-provider block fall back to the global value.
 
 ** Provider-specific prompts
 
@@ -262,8 +324,9 @@ Checks all configured providers without spending any tokens. Reports:
   claude      claude-haiku-4-5-20251001            ● ok  (510ms)
 
   shell
-  bash    ~/.bashrc    ● present
-  zsh     ~/.zshrc     ○ not found
+  bash    ~/.bashrc                      ● present
+  zsh     ~/.zshrc                       ○ not found
+  fish    ~/.config/fish/config.fish     ○ not found
 #+end_example
 
 ** Status
@@ -282,6 +345,7 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
   config    ~/.config/guard-sh/config.yaml
   prompt    ~/.config/guard-sh/prompt.txt
   timeout   10s
+  work dir  ● on
   cache     ● on
             1000 max entries
             42 entries, 8.3 KB
@@ -355,7 +419,7 @@ If a provider fails, guard-sh moves on to the next and shows why:
 guard-sh setup
 #+end_src
 
-Creates =~/.config/guard-sh/= with the default config and prompt, writes shell integration scripts, and adds them to your =.bashrc= / =.zshrc=. Existing files are not overwritten. This is the only step needed after downloading a pre-built binary.
+Creates =~/.config/guard-sh/= with the default config and prompt, writes shell integration scripts (bash, zsh, fish), and adds them to your rc file based on your current shell. Existing files are not overwritten. This is the only step needed after downloading a pre-built binary.
 
 ** Version
 
@@ -439,6 +503,7 @@ guard-sh cache clear        # delete all cached responses
 |-------+------------------------------------|
 | bash  | ~shopt -s extdebug~ + ~DEBUG~ trap |
 | zsh   | ZLE widget bound to Enter          |
+| fish  | ~bind \n~/~\r~ mapped to custom function |
 
 * License
   :PROPERTIES:
