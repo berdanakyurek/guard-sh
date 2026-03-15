@@ -435,7 +435,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 	defer cancel()
 
-	safe, warning := g.Check(ctx, cmd)
+	query := cmd
+	if cfg.IsSendWorkingDirectoryEnabled() {
+		if wd, err := os.Getwd(); err == nil {
+			query = "Working directory: " + wd + "\nCommand: " + cmd
+		}
+	}
+
+	safe, warning := g.Check(ctx, cmd, query)
 	if safe {
 		os.Exit(0)
 	}

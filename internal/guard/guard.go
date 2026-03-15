@@ -54,14 +54,20 @@ func (g *Guard) dbg(format string, args ...any) {
 	}
 }
 
-// Check queries the LLM. Returns (safe=true, warning="") if OK,
-// or (safe=false, warning="...") if the command needs confirmation.
-// On any error it fails open.
-func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning string) {
-	g.dbg("\n  %scommand%s   %s%q%s\n\n", dbgDim, dbgReset, dbgCyan, cmd, dbgReset)
+// Check queries the LLM. rawCmd is the original shell command (used for whitelist
+// and cache key). query is what is sent to the LLM — when working directory is
+// enabled it includes a "Working directory: ...\nCommand: ..." prefix; otherwise
+// it equals rawCmd.
+// Returns (safe=true, warning="") if OK, or (safe=false, warning="...") if the
+// command needs confirmation. On any error it fails open.
+func (g *Guard) Check(ctx context.Context, rawCmd, query string) (safe bool, warning string) {
+	g.dbg("\n  %scommand%s   %s%q%s\n\n", dbgDim, dbgReset, dbgCyan, rawCmd, dbgReset)
+	if query != rawCmd {
+		g.dbg("  %squery%s     %s%q%s\n\n", dbgDim, dbgReset, dbgCyan, query, dbgReset)
+	}
 
 	if len(g.whitelist) > 0 {
-		bases := extractBaseCommands(cmd)
+		bases := extractBaseCommands(rawCmd)
 		if len(bases) > 0 && g.allWhitelisted(bases) {
 			g.dbg("  %swhitelist%s %s● hit%s %s(%s)%s\n\n", dbgDim, dbgReset, dbgGreen, dbgReset, dbgDim, strings.Join(bases, ", "), dbgReset)
 			return true, ""
@@ -72,7 +78,7 @@ func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning strin
 	}
 
 	if g.cache != nil {
-		if cached, ok := g.cache.Get(cmd); ok {
+		if cached, ok := g.cache.Get(query); ok {
 			g.dbg("  %scache%s     %s● hit%s %s→ %q%s\n\n", dbgDim, dbgReset, dbgGreen, dbgReset, dbgDim, cached, dbgReset)
 			if cached == "OK" || cached == "" {
 				return true, ""
@@ -86,7 +92,7 @@ func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning strin
 
 	g.dbg("\n  %sproviders%s\n", dbgBold, dbgReset)
 
-	response, err := g.provider.Query(ctx, g.prompt, cmd)
+	response, err := g.provider.Query(ctx, g.prompt, query)
 	if err != nil {
 		g.dbg("\n  %s✗ all providers failed%s\n\n", dbgRed, dbgReset)
 		return false, "Could not reach any provider. Proceed anyway?"
@@ -94,7 +100,7 @@ func (g *Guard) Check(ctx context.Context, cmd string) (safe bool, warning strin
 
 	response = strings.TrimSpace(response)
 	if g.cache != nil {
-		g.cache.Set(cmd, response)
+		g.cache.Set(query, response)
 	}
 
 	if response == "OK" || response == "" {

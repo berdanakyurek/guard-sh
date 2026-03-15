@@ -14,6 +14,12 @@ cache_enabled: true
 # Maximum number of cached responses to keep. Oldest entries are evicted when full.
 cache_max_size: 1000
 
+# Include the working directory in the command sent to the LLM.
+# This allows the LLM to assess risk based on context (e.g. running chmod in /etc vs ~/projects).
+# Cache keys include the working directory when this is enabled.
+# Set to false to send only the command string.
+send_working_directory: true
+
 # Redaction: sensitive values are replaced with [REDACTED] before sending to LLM providers.
 # Per-provider overrides can be added under providers.NAME.redaction (optional).
 # Toggle per-provider with: guard-sh redact pattern on/off

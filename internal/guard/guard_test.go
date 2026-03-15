@@ -48,7 +48,7 @@ func TestWhitelist(t *testing.T) {
 
 	for _, tt := range tests {
 		g := New(&mockProvider{}, "", "", tt.wl, 0, nil)
-		safe, _ := g.Check(context.Background(), tt.cmd)
+		safe, _ := g.Check(context.Background(), tt.cmd, tt.cmd)
 		if safe != tt.wantSafe {
 			t.Errorf("cmd=%q whitelist=%v: got safe=%v, want %v", tt.cmd, tt.wl, safe, tt.wantSafe)
 		}
@@ -87,7 +87,7 @@ func TestExtractBaseCommands(t *testing.T) {
 
 func TestCheck_SafeResponse(t *testing.T) {
 	g := New(&mockProvider{response: "OK"}, "", "", nil, 0, nil)
-	safe, warning := g.Check(context.Background(), "rm -rf /")
+	safe, warning := g.Check(context.Background(), "rm -rf /", "rm -rf /")
 	if !safe {
 		t.Errorf("expected safe=true, got false (warning=%q)", warning)
 	}
@@ -95,7 +95,7 @@ func TestCheck_SafeResponse(t *testing.T) {
 
 func TestCheck_UnsafeResponse(t *testing.T) {
 	g := New(&mockProvider{response: "Deletes everything"}, "", "", nil, 0, nil)
-	safe, warning := g.Check(context.Background(), "rm -rf /")
+	safe, warning := g.Check(context.Background(), "rm -rf /", "rm -rf /")
 	if safe {
 		t.Error("expected safe=false, got true")
 	}
@@ -106,7 +106,7 @@ func TestCheck_UnsafeResponse(t *testing.T) {
 
 func TestCheck_ProviderError_FailsOpen(t *testing.T) {
 	g := New(&mockProvider{err: errors.New("network error")}, "", "", nil, 0, nil)
-	safe, _ := g.Check(context.Background(), "rm -rf /")
+	safe, _ := g.Check(context.Background(), "rm -rf /", "rm -rf /")
 	if safe {
 		t.Error("expected safe=false when provider errors (fail open still prompts)")
 	}
@@ -118,8 +118,8 @@ func TestCheck_CacheHit(t *testing.T) {
 	p := &countingProvider{response: "OK", onCall: func() { called++ }}
 	g := New(p, "", dir, nil, 100, nil)
 
-	g.Check(context.Background(), "ls -la")
-	g.Check(context.Background(), "ls -la")
+	g.Check(context.Background(), "ls -la", "ls -la")
+	g.Check(context.Background(), "ls -la", "ls -la")
 
 	if called != 1 {
 		t.Errorf("expected provider called once (cache hit on second), got %d", called)
@@ -131,8 +131,8 @@ func TestCheck_CacheDisabled(t *testing.T) {
 	p := &countingProvider{response: "OK", onCall: func() { called++ }}
 	g := New(p, "", "", nil, 0, nil) // cacheMaxSize=0 disables cache
 
-	g.Check(context.Background(), "ls -la")
-	g.Check(context.Background(), "ls -la")
+	g.Check(context.Background(), "ls -la", "ls -la")
+	g.Check(context.Background(), "ls -la", "ls -la")
 
 	if called != 2 {
 		t.Errorf("expected provider called twice (no cache), got %d", called)
@@ -147,7 +147,7 @@ func TestCheck_CustomPrompt(t *testing.T) {
 	var receivedPrompt string
 	p := &capturingProvider{onQuery: func(prompt, _ string) { receivedPrompt = prompt }}
 	g := New(p, "default prompt", dir, nil, 0, nil)
-	g.Check(context.Background(), "ls")
+	g.Check(context.Background(), "ls", "ls")
 	if receivedPrompt != "custom prompt" {
 		t.Errorf("expected custom prompt, got %q", receivedPrompt)
 	}
@@ -157,7 +157,7 @@ func TestCheck_DefaultPrompt(t *testing.T) {
 	var receivedPrompt string
 	p := &capturingProvider{onQuery: func(prompt, _ string) { receivedPrompt = prompt }}
 	g := New(p, "default prompt", t.TempDir(), nil, 0, nil)
-	g.Check(context.Background(), "ls")
+	g.Check(context.Background(), "ls", "ls")
 	if receivedPrompt != "default prompt" {
 		t.Errorf("expected default prompt, got %q", receivedPrompt)
 	}
