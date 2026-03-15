@@ -38,7 +38,7 @@ Commands in your *whitelist* skip the LLM entirely.
   :END:
 
 - Go 1.22+
-- bash or zsh
+- bash, zsh, or fish
 - API key(s) for one or more of the cloud LLMs listed above, *or* a running [[https://ollama.com][Ollama]] instance for fully local operation.
 
 * Installation
@@ -58,7 +58,7 @@ This will:
 - Build the ~guard-sh~ binary and install it to =~/.local/bin/=
 - Copy the default config to =~/.config/guard-sh/config.yaml=
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
-- Add shell integration to your =.bashrc= or =.zshrc=
+- Add shell integration to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish=
 
 ** From binary
 
@@ -69,7 +69,7 @@ chmod +x ~/.local/bin/guard-sh
 guard-sh setup
 #+end_src
 
-This will create the config dir, write the shell integration scripts, and add them to your =.bashrc= / =.zshrc=.
+This will create the config dir, write the shell integration scripts, and add them to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish= depending on your current shell.
 
 ** Install without shell integration
 
@@ -297,8 +297,9 @@ Checks all configured providers without spending any tokens. Reports:
   claude      claude-haiku-4-5-20251001            ● ok  (510ms)
 
   shell
-  bash    ~/.bashrc    ● present
-  zsh     ~/.zshrc     ○ not found
+  bash    ~/.bashrc                      ● present
+  zsh     ~/.zshrc                       ○ not found
+  fish    ~/.config/fish/config.fish     ○ not found
 #+end_example
 
 ** Status
@@ -390,7 +391,7 @@ If a provider fails, guard-sh moves on to the next and shows why:
 guard-sh setup
 #+end_src
 
-Creates =~/.config/guard-sh/= with the default config and prompt, writes shell integration scripts, and adds them to your =.bashrc= / =.zshrc=. Existing files are not overwritten. This is the only step needed after downloading a pre-built binary.
+Creates =~/.config/guard-sh/= with the default config and prompt, writes shell integration scripts (bash, zsh, fish), and adds them to your rc file based on your current shell. Existing files are not overwritten. This is the only step needed after downloading a pre-built binary.
 
 ** Version
 
@@ -474,6 +475,7 @@ guard-sh cache clear        # delete all cached responses
 |-------+------------------------------------|
 | bash  | ~shopt -s extdebug~ + ~DEBUG~ trap |
 | zsh   | ZLE widget bound to Enter          |
+| fish  | ~bind \n~/~\r~ mapped to custom function |
 
 * License
   :PROPERTIES:

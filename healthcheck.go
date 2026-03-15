@@ -110,9 +110,14 @@ func runHealthcheck() {
 	// --- Shell integration ---
 	fmt.Printf("\n  %sshell%s\n", bold, reset)
 	home, _ := os.UserHomeDir()
+	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+	if xdgConfig == "" {
+		xdgConfig = filepath.Join(home, ".config")
+	}
 	shellChecks := []struct{ shell, rc, marker string }{
 		{"bash", filepath.Join(home, ".bashrc"), "guard.bash"},
 		{"zsh", filepath.Join(home, ".zshrc"), "guard.zsh"},
+		{"fish", filepath.Join(xdgConfig, "fish", "config.fish"), "guard.fish"},
 	}
 	for _, s := range shellChecks {
 		shellCol := fmt.Sprintf("%-6s", s.shell)
