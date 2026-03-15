@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Developer Identity
+
+At the start of every session, read `.claude-identity` from the repo root if it exists. It contains:
+- `DEVELOPER_ID` — your identity (e.g. `claude-developer-1`); use this when referring to yourself
+- `BRANCH_PREFIX` — prefix for all branches you create (e.g. `claude-1/feature-name`)
+
+If `.claude-identity` does not exist, you are working in the base repo as the human owner.
+
 ## What This Project Does
 
 **guard-sh** is a shell safety layer. It hooks into bash/zsh to intercept commands before execution, queries an LLM to assess risk, and prompts the user for confirmation if the command is deemed risky. Safe commands are whitelisted or cached to skip the LLM call.
