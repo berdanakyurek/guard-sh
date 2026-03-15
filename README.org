@@ -166,8 +166,6 @@ To disable:
 send_working_directory: false
 #+end_src
 
-Or via config file: set =send_working_directory: false= under the root level.
-
 ** Redaction
   :PROPERTIES:
   :CUSTOM_ID: redaction
@@ -310,7 +308,7 @@ Checks all configured providers without spending any tokens. Reports:
 
 - API key and model validity for cloud providers; server connectivity for Ollama
 - Response latency per provider
-- Shell integration status (~.bashrc~ / ~.zshrc~)
+- Shell integration status (~.bashrc~ / ~.zshrc~ / ~config.fish~)
 - Config errors (e.g. unknown provider names in ~provider_order~)
 
 #+begin_example
@@ -353,23 +351,18 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
   providers
   1  gemini
      model                gemini-3.1-flash-lite-preview
-     pattern based redaction  ● on
+     pattern redaction     ● on
+     entropy redaction     ○ off
 
   2  ollama
      model                llama3.2
-     pattern based redaction  ○ off
+     pattern redaction     ○ off
+     entropy redaction     ○ off
 
   3  deepseek
      model                deepseek-chat
-     pattern based redaction  ● on
-
-  4  openai
-     model                gpt-4o-mini
-     pattern based redaction  ● on
-
-  5  claude
-     model                claude-haiku-4-5-20251001
-     pattern based redaction  ● on
+     pattern redaction     ● on
+     entropy redaction     ○ off
 
   whitelist
   1  ls
@@ -391,26 +384,47 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
 guard-sh check "<command>" --debug
 #+end_src
 
-Prints a step-by-step trace to stderr: whitelist result, cache hit/miss, which provider was tried, response time, and the final LLM response.
+Prints a step-by-step trace to stderr: whitelist result, per-provider cache check, redaction status, response time, and the final LLM response.
 
 #+begin_example
   command   "rm -rf /"
 
   whitelist ○ miss
-  cache     ○ miss
 
   providers
-  openai      ✓ ok (1315ms)
+  openai      pattern ○ off  unchanged
+              entropy ○ off  unchanged
+                ✓ ok (1315ms)
 
   result    "This command will recursively delete everything from root."
+#+end_example
+
+With redaction enabled, the redacted form is shown before the query is sent:
+
+#+begin_example
+  providers
+  openai      pattern ● on  → "rm -rf [REDACTED]"
+              entropy ○ off  unchanged
+                ✓ ok (891ms)
+#+end_example
+
+On a cache hit, the provider is not queried at all:
+
+#+begin_example
+  providers
+  openai      cache ● hit  → "This command will recursively delete everything from root."
 #+end_example
 
 If a provider fails, guard-sh moves on to the next and shows why:
 
 #+begin_example
   providers
-  openai      ✗ HTTP 429: Rate limit exceeded (234ms), trying next
-  gemini      ✓ ok (401ms)
+  openai      pattern ○ off  unchanged
+              entropy ○ off  unchanged
+                ✗ HTTP 429: Rate limit exceeded (234ms), trying next
+  gemini      pattern ○ off  unchanged
+              entropy ○ off  unchanged
+                ✓ ok (401ms)
 #+end_example
 
 ** Setup

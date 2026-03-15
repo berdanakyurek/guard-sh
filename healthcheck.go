@@ -49,6 +49,9 @@ func runHealthcheck() {
 
 	// --- Providers ---
 	fmt.Printf("  %sproviders%s\n", bold, reset)
+	if len(cfg.ProviderOrder) == 0 {
+		fmt.Printf("  %s✗ no providers configured — run \"guard-sh provider add\"%s\n", red, reset)
+	}
 	for _, name := range cfg.ProviderOrder {
 		p := cfg.Providers[name]
 		apiKey := ""

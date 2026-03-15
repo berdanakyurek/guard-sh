@@ -22,7 +22,7 @@ func runHelp() {
 
 	// Status
 	fmt.Printf("  %s\n", b("status"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, cache stats, providers, whitelist"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, work dir, cache stats, providers, whitelist"))
 
 	// Debug
 	fmt.Printf("  %s\n", b("debug"))
@@ -60,7 +60,7 @@ func runHelp() {
 
 	// Config
 	fmt.Printf("  %s\n", b("config"))
-	fmt.Printf("  %s\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout, redact_patterns"))
+	fmt.Printf("  %s\n", d("~/.config/guard-sh/config.yaml — providers, API keys, whitelist, cache, timeout, send_working_directory, redaction"))
 	fmt.Printf("  %s\n", d("~/.config/guard-sh/prompt.txt — default system prompt (edit without rebuild)"))
 	fmt.Printf("  %s\n\n", d("~/.config/guard-sh/prompt_<provider>.txt — per-provider prompt override"))
 

@@ -218,6 +218,34 @@ func TestMulti_CacheKeyIsPerProvider(t *testing.T) {
 	}
 }
 
+type promptCapturingProvider struct {
+	lastPrompt string
+}
+
+func (p *promptCapturingProvider) Query(_ context.Context, prompt, _ string) (string, error) {
+	p.lastPrompt = prompt
+	return "OK", nil
+}
+
+func TestMulti_ProviderSpecificPromptOverridesGlobal(t *testing.T) {
+	p := &promptCapturingProvider{}
+	prompts := map[string]string{"p1": "custom prompt for p1"}
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, prompts, nil, nil, nil, nil)
+	m.Query(context.Background(), "global prompt", "ls")
+	if p.lastPrompt != "custom prompt for p1" {
+		t.Errorf("expected per-provider prompt, got %q", p.lastPrompt)
+	}
+}
+
+func TestMulti_GlobalPromptUsedWhenNoOverride(t *testing.T) {
+	p := &promptCapturingProvider{}
+	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, nil, nil, nil)
+	m.Query(context.Background(), "global prompt", "ls")
+	if p.lastPrompt != "global prompt" {
+		t.Errorf("expected global prompt, got %q", p.lastPrompt)
+	}
+}
+
 func TestMulti_CacheDisabled(t *testing.T) {
 	p := &mockProvider{response: "OK"}
 	m := NewMulti([]string{"p1"}, []guard.Provider{p}, nil, nil, nil, nil, nil)

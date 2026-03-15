@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestCache_GetSet(t *testing.T) {
@@ -68,6 +69,46 @@ func TestCache_Persist(t *testing.T) {
 	}
 	if got != "OK" {
 		t.Errorf("got %q, want %q", got, "OK")
+	}
+}
+
+func TestCache_CorruptedFileRecovery(t *testing.T) {
+	dir := t.TempDir()
+	// Write invalid JSON to cache file
+	if err := os.WriteFile(dir+"/cache.json", []byte("not valid json {{"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// Load should not panic and should start with an empty cache
+	c := Load(dir, 10)
+	if c == nil {
+		t.Fatal("expected non-nil cache even with corrupted file")
+	}
+	_, ok := c.Get("anything")
+	if ok {
+		t.Error("expected cache miss on fresh cache after corrupted file")
+	}
+	// Should still be usable
+	c.Set("key", "val")
+	got, ok := c.Get("key")
+	if !ok || got != "val" {
+		t.Error("cache not usable after corrupted file recovery")
+	}
+}
+
+func TestCache_GetUpdatesTimestamp(t *testing.T) {
+	dir := t.TempDir()
+	c := Load(dir, 10)
+
+	c.Set("key", "val")
+	before := c.entries["key"].Ts
+
+	// Sleep briefly to ensure the timestamp changes
+	time.Sleep(1100 * time.Millisecond)
+	c.Get("key")
+
+	after := c.entries["key"].Ts
+	if after <= before {
+		t.Error("Get should update timestamp for LRU tracking")
 	}
 }
 
