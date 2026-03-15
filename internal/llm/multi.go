@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
+	"github.com/Berdan/guard-sh/internal/cache"
 	"github.com/Berdan/guard-sh/internal/guard"
 	"github.com/Berdan/guard-sh/internal/redact"
 )
@@ -20,22 +22,25 @@ const (
 )
 
 // Multi tries each provider in order, falling back to the next on error.
+// Cache is keyed per-provider: "providerName:command".
 type Multi struct {
 	providers        []guard.Provider
 	names            []string
 	prompts          map[string]string                  // per-provider prompt overrides
 	patternRedactors map[string]*redact.Redactor        // per-provider pattern redactors
 	entropyRedactors map[string]*redact.EntropyRedactor // per-provider entropy redactors
+	cache            *cache.Cache
 	debug            io.Writer
 }
 
-func NewMulti(names []string, providers []guard.Provider, prompts map[string]string, patternRedactors map[string]*redact.Redactor, entropyRedactors map[string]*redact.EntropyRedactor, debug io.Writer) *Multi {
+func NewMulti(names []string, providers []guard.Provider, prompts map[string]string, patternRedactors map[string]*redact.Redactor, entropyRedactors map[string]*redact.EntropyRedactor, c *cache.Cache, debug io.Writer) *Multi {
 	return &Multi{
 		names:            names,
 		providers:        providers,
 		prompts:          prompts,
 		patternRedactors: patternRedactors,
 		entropyRedactors: entropyRedactors,
+		cache:            c,
 		debug:            debug,
 	}
 }
@@ -43,6 +48,18 @@ func NewMulti(names []string, providers []guard.Provider, prompts map[string]str
 func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string, error) {
 	for i, p := range m.providers {
 		name := m.names[i]
+		cacheKey := name + ":" + command
+
+		// Per-provider cache check
+		if m.cache != nil {
+			if cached, ok := m.cache.Get(cacheKey); ok {
+				if m.debug != nil {
+					fmt.Fprintf(m.debug, "  %s%-10s%s  %scache ● hit%s  %s→ %q%s\n", dbgCyan, name, dbgReset, dbgGreen, dbgReset, dbgDim, cached, dbgReset)
+				}
+				return cached, nil
+			}
+		}
+
 		prompt := systemPrompt
 		if override, ok := m.prompts[name]; ok {
 			prompt = override
@@ -80,6 +97,10 @@ func (m *Multi) Query(ctx context.Context, systemPrompt, command string) (string
 		result, err := p.Query(ctx, prompt, cmd)
 		elapsed := time.Since(start).Milliseconds()
 		if err == nil {
+			result = strings.TrimSpace(result)
+			if m.cache != nil {
+				m.cache.Set(cacheKey, result)
+			}
 			if m.debug != nil {
 				fmt.Fprintf(m.debug, "  %s            ✓ ok %s(%dms)%s\n", dbgGreen, dbgDim, elapsed, dbgReset)
 			}
