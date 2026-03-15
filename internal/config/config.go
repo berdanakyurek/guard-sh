@@ -124,13 +124,22 @@ func (p *ProviderConfig) EffectiveEntropyRedaction(global *EntropyRedactionConfi
 }
 
 type Config struct {
-	ProviderOrder    []string                   `yaml:"provider_order"`
-	Providers        map[string]*ProviderConfig `yaml:"providers"`
-	TimeoutSeconds   int                        `yaml:"timeout_seconds"`
-	CacheEnabled     *bool                      `yaml:"cache_enabled"`
-	CacheMaxSize     int                        `yaml:"cache_max_size"`
-	CommandWhitelist []string                   `yaml:"command_whitelist"`
-	Redaction        RedactionConfig            `yaml:"redaction"`
+	ProviderOrder        []string                   `yaml:"provider_order"`
+	Providers            map[string]*ProviderConfig `yaml:"providers"`
+	TimeoutSeconds       int                        `yaml:"timeout_seconds"`
+	CacheEnabled         *bool                      `yaml:"cache_enabled"`
+	CacheMaxSize         int                        `yaml:"cache_max_size"`
+	SendWorkingDirectory *bool                      `yaml:"send_working_directory"`
+	CommandWhitelist     []string                   `yaml:"command_whitelist"`
+	Redaction            RedactionConfig            `yaml:"redaction"`
+}
+
+// IsSendWorkingDirectoryEnabled returns true unless explicitly set to false.
+func (c *Config) IsSendWorkingDirectoryEnabled() bool {
+	if c.SendWorkingDirectory == nil {
+		return true
+	}
+	return *c.SendWorkingDirectory
 }
 
 func (c *Config) Get(name string) (*ProviderConfig, error) {

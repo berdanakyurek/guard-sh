@@ -93,6 +93,9 @@ func runStatus(args []string) {
 	}
 	fmt.Printf("  %s  %s%ds%s\n", label("timeout "), dim, timeout, reset)
 
+	wdEnabled := cfg.IsSendWorkingDirectoryEnabled()
+	fmt.Printf("  %s  %s\n", label("work dir"), statusBadge(map[bool]string{true: "on", false: "off"}[wdEnabled]))
+
 	cacheEnabled := cfg.CacheEnabled == nil || *cfg.CacheEnabled
 	cacheMaxSize := cfg.CacheMaxSize
 	if cacheMaxSize <= 0 {
@@ -439,7 +442,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 	defer cancel()
 
-	safe, warning := g.Check(ctx, cmd)
+	query := cmd
+	if cfg.IsSendWorkingDirectoryEnabled() {
+		if wd, err := os.Getwd(); err == nil {
+			query = "Working directory: " + wd + "\nCommand: " + cmd
+		}
+	}
+
+	safe, warning := g.Check(ctx, cmd, query)
 	if safe {
 		os.Exit(0)
 	}
