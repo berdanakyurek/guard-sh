@@ -24,7 +24,7 @@ function _guard_execute
         return
     end
 
-    printf 'guard-sh: %s ' $warning
+    printf '\nguard-sh: %s ' $warning
     set -l confirm (read --nchars 1 --silent)
     printf '\n'
 
