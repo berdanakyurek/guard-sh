@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Berdan/guard-sh/internal/config"
@@ -62,7 +64,7 @@ func runSetup() {
 
 	// --- Shell integration ---
 	fmt.Println()
-	shellName := filepath.Base(os.Getenv("SHELL"))
+	shellName := detectShell()
 	var rcFile, scriptPath string
 	switch shellName {
 	case "zsh":
@@ -124,6 +126,44 @@ func runSetup() {
 func printNext(configPath string) {
 	fmt.Printf("  %snext%s  edit %s and set your api_key\n", bold, reset, configPath)
 	fmt.Printf("  %s      then restart your shell or run: source ~/.bashrc%s\n\n", dim, reset)
+}
+
+// detectShell returns the name of the currently running shell.
+// It reads the parent process name, which is the most reliable signal —
+// shell version variables (ZSH_VERSION etc.) are not exported to child
+// processes. Falls back to $SHELL (login shell) if the parent process
+// cannot be determined or is not a known shell.
+func detectShell() string {
+	if name := parentProcessName(); name != "" {
+		return name
+	}
+	return filepath.Base(os.Getenv("SHELL"))
+}
+
+// parentProcessName returns the name of the parent process if it is a
+// known shell (bash, zsh, fish), otherwise returns "".
+func parentProcessName() string {
+	ppid := os.Getppid()
+
+	// Linux: /proc/<ppid>/comm contains just the process name.
+	if data, err := os.ReadFile(fmt.Sprintf("/proc/%d/comm", ppid)); err == nil {
+		return knownShell(strings.TrimSpace(string(data)))
+	}
+
+	// macOS / other Unix: fall back to ps.
+	if out, err := exec.Command("ps", "-p", strconv.Itoa(ppid), "-o", "comm=").Output(); err == nil {
+		return knownShell(strings.TrimSpace(filepath.Base(string(out))))
+	}
+
+	return ""
+}
+
+func knownShell(name string) string {
+	switch name {
+	case "zsh", "bash", "fish":
+		return name
+	}
+	return ""
 }
 
 func fatalf(format string, args ...any) {

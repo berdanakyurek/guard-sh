@@ -149,7 +149,29 @@ func runStatus(args []string) {
 	globalPatterns := globalRedaction.PatternBased.GetPatterns()
 	if len(globalPatterns) > 0 {
 		fmt.Printf("\n  %sredaction%s\n", bold, reset)
-		fmt.Printf("  %s  %s%d global patterns%s\n", label("patterns"), dim, len(globalPatterns), reset)
+		const maxPatterns = 10
+		shown := globalPatterns
+		if len(shown) > maxPatterns {
+			shown = shown[:maxPatterns]
+		}
+		for i, p := range shown {
+			fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, dim, p, reset)
+		}
+		if remaining := len(globalPatterns) - maxPatterns; remaining > 0 {
+			fmt.Printf("  %s+%d more (to see all, run \"guard-sh redact list\")%s\n", dim, remaining, reset)
+		}
+	}
+
+	fmt.Printf("\n  %sshell%s\n", bold, reset)
+	for _, s := range shellIntegrationChecks() {
+		shellCol := fmt.Sprintf("%-6s", s.Shell)
+		if s.Present {
+			fmt.Printf("  %s%s%s  %s%s%s  %s● present%s\n",
+				cyan, shellCol, reset, dim, s.RC, reset, green, reset)
+		} else {
+			fmt.Printf("  %s%s%s  %s%s%s  %s○ not found%s\n",
+				cyan, shellCol, reset, dim, s.RC, reset, dim, reset)
+		}
 	}
 
 	if len(cfg.CommandWhitelist) > 0 {
@@ -287,7 +309,7 @@ func runWhitelist(args []string) {
 
 func main() {
 	if len(os.Args) >= 2 && (os.Args[1] == "on" || os.Args[1] == "off") {
-		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source /path/to/shell/guard.bash\n")
+		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source %s/guard.bash\n", config.Dir())
 		os.Exit(2)
 	}
 
@@ -323,6 +345,11 @@ func main() {
 
 	if len(os.Args) >= 2 && os.Args[1] == "setup" {
 		runSetup()
+		return
+	}
+
+	if len(os.Args) >= 2 && os.Args[1] == "uninstall" {
+		runUninstall(os.Args[2:])
 		return
 	}
 

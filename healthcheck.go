@@ -112,29 +112,47 @@ func runHealthcheck() {
 
 	// --- Shell integration ---
 	fmt.Printf("\n  %sshell%s\n", bold, reset)
+	for _, s := range shellIntegrationChecks() {
+		shellCol := fmt.Sprintf("%-6s", s.Shell)
+		if s.Present {
+			fmt.Printf("  %s%s%s  %s%s%s  %s● present%s\n",
+				cyan, shellCol, reset, dim, s.RC, reset, green, reset)
+		} else {
+			fmt.Printf("  %s%s%s  %s%s%s  %s○ not found%s\n",
+				cyan, shellCol, reset, dim, s.RC, reset, dim, reset)
+		}
+	}
+
+	fmt.Println()
+}
+
+type shellIntegrationCheck struct {
+	Shell   string
+	RC      string
+	Present bool
+}
+
+func shellIntegrationChecks() []shellIntegrationCheck {
 	home, _ := os.UserHomeDir()
 	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfig == "" {
 		xdgConfig = filepath.Join(home, ".config")
 	}
-	shellChecks := []struct{ shell, rc, marker string }{
+	entries := []struct{ shell, rc, marker string }{
 		{"bash", filepath.Join(home, ".bashrc"), "guard.bash"},
 		{"zsh", filepath.Join(home, ".zshrc"), "guard.zsh"},
 		{"fish", filepath.Join(xdgConfig, "fish", "config.fish"), "guard.fish"},
 	}
-	for _, s := range shellChecks {
-		shellCol := fmt.Sprintf("%-6s", s.shell)
-		data, err := os.ReadFile(s.rc)
-		if err != nil || !strings.Contains(string(data), s.marker) {
-			fmt.Printf("  %s%s%s  %s%s%s  %s○ not found%s\n",
-				cyan, shellCol, reset, dim, s.rc, reset, dim, reset)
-		} else {
-			fmt.Printf("  %s%s%s  %s%s%s  %s● present%s\n",
-				cyan, shellCol, reset, dim, s.rc, reset, green, reset)
+	result := make([]shellIntegrationCheck, len(entries))
+	for i, e := range entries {
+		data, err := os.ReadFile(e.rc)
+		result[i] = shellIntegrationCheck{
+			Shell:   e.shell,
+			RC:      e.rc,
+			Present: err == nil && strings.Contains(string(data), e.marker),
 		}
 	}
-
-	fmt.Println()
+	return result
 }
 
 // healthOllama calls the Ollama tags endpoint to verify the server is running.

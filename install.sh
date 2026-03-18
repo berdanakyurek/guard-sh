@@ -27,7 +27,8 @@ if [[ $WITH_BUILD -eq 1 ]]; then
     echo "Building guard-sh..."
     mkdir -p "$BIN_DIR"
     cd "$INSTALL_DIR"
-    go build -o "$BIN_DIR/guard-sh" .
+    VERSION="${GUARD_SH_VERSION:-1.0.0}"
+    go build -ldflags "-X main.version=$VERSION" -o "$BIN_DIR/guard-sh" .
     echo "Binary installed: $BIN_DIR/guard-sh"
 else
     echo "Skipping build (--without-build)."
@@ -63,7 +64,18 @@ echo ""
 
 # --- Shell integration ---
 if [[ $WITH_SHELL -eq 1 ]]; then
-    SHELL_NAME="$(basename "$SHELL")"
+    # Detect the currently running shell via version variables first.
+    # $SHELL reflects the login shell and may differ from the active shell
+    # (e.g. login shell is bash but the user is running this from zsh).
+    if [[ -n "$ZSH_VERSION" ]]; then
+        SHELL_NAME="zsh"
+    elif [[ -n "$FISH_VERSION" ]]; then
+        SHELL_NAME="fish"
+    elif [[ -n "$BASH_VERSION" ]]; then
+        SHELL_NAME="bash"
+    else
+        SHELL_NAME="$(basename "$SHELL")"
+    fi
     case "$SHELL_NAME" in
         zsh)
             RC_FILE="$HOME/.zshrc"

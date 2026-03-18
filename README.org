@@ -58,7 +58,7 @@ This will:
 - Build the ~guard-sh~ binary and install it to =~/.local/bin/=
 - Copy the default config to =~/.config/guard-sh/config.yaml=
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
-- Add shell integration to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish=
+- Add shell integration to the rc file of your *active* shell (bash → =.bashrc=, zsh → =.zshrc=, fish → =config.fish=)
 
 ** From binary
 
@@ -69,13 +69,71 @@ chmod +x ~/.local/bin/guard-sh
 guard-sh setup
 #+end_src
 
-This will create the config dir, write the shell integration scripts, and add them to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish= depending on your current shell.
+This will create the config dir, write the shell integration scripts, and add them to the rc file of your active shell.
 
 ** Install without shell integration
 
 #+begin_src bash
 bash install.sh --without-shell
 #+end_src
+
+** Multiple shells
+
+~install.sh~ and ~guard-sh setup~ only add integration for your *active shell* (detected via the parent process). If you use multiple shells, run the command once from each:
+
+#+begin_src bash
+# In bash
+bash install.sh
+
+# In zsh
+bash install.sh
+
+# In fish
+bash install.sh
+#+end_src
+
+Or use ~guard-sh setup~ after installing the binary:
+
+#+begin_src bash
+# In bash
+guard-sh setup
+
+# Switch to zsh, then:
+guard-sh setup
+#+end_src
+
+* Uninstallation
+  :PROPERTIES:
+  :CUSTOM_ID: uninstallation
+  :END:
+
+** Using the shell script
+
+#+begin_src bash
+bash uninstall.sh
+#+end_src
+
+This removes the binary, shell integration from all rc files, and the config dir.
+
+To keep your config (providers, whitelist, cache):
+
+#+begin_src bash
+bash uninstall.sh --keep-config
+#+end_src
+
+** Using the built-in command
+
+#+begin_src bash
+guard-sh uninstall          # removes shell integration and shell scripts, keeps config
+guard-sh uninstall --purge  # also removes the config dir (~/.config/guard-sh)
+#+end_src
+
+After running ~guard-sh uninstall~, the binary itself is not removed (a running program cannot delete itself reliably). The command prints the path to remove manually:
+
+#+begin_example
+  next  remove the binary manually:
+        rm ~/.local/bin/guard-sh
+#+end_example
 
 * Configuration
   :PROPERTIES:
@@ -210,6 +268,7 @@ redaction:
 Toggle per-provider:
 
 #+begin_src bash
+guard-sh redact list          # list all global redaction patterns
 guard-sh redact pattern on    # interactively enable for a provider
 guard-sh redact pattern off   # interactively disable for a provider
 #+end_src
@@ -333,7 +392,7 @@ Checks all configured providers without spending any tokens. Reports:
 guard-sh status
 #+end_src
 
-Shows session and global state, prompt path, timeout, cache stats, active providers, and whitelist.
+Shows session and global state, prompt path, timeout, cache stats, active providers, redaction patterns, shell integration status, and whitelist.
 
 #+begin_example
   guard-sh
@@ -363,6 +422,16 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
      model                deepseek-chat
      pattern redaction     ● on
      entropy redaction     ○ off
+
+  redaction
+  1  (?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+
+  2  (?i)--password\s+\S+
+  3  AKIA[0-9A-Z]{16}
+
+  shell
+  bash    ~/.bashrc                      ● present
+  zsh     ~/.zshrc                       ○ not found
+  fish    ~/.config/fish/config.fish     ○ not found
 
   whitelist
   1  ls
@@ -441,7 +510,7 @@ Creates =~/.config/guard-sh/= with the default config and prompt, writes shell i
 guard-sh version
 #+end_src
 
-Prints the current version (e.g. ~v0.1.0~).
+Prints the current version (e.g. ~1.0.0~).
 
 * Providers
   :PROPERTIES:
