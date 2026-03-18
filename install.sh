@@ -64,7 +64,18 @@ echo ""
 
 # --- Shell integration ---
 if [[ $WITH_SHELL -eq 1 ]]; then
-    SHELL_NAME="$(basename "$SHELL")"
+    # Detect the currently running shell via version variables first.
+    # $SHELL reflects the login shell and may differ from the active shell
+    # (e.g. login shell is bash but the user is running this from zsh).
+    if [[ -n "$ZSH_VERSION" ]]; then
+        SHELL_NAME="zsh"
+    elif [[ -n "$FISH_VERSION" ]]; then
+        SHELL_NAME="fish"
+    elif [[ -n "$BASH_VERSION" ]]; then
+        SHELL_NAME="bash"
+    else
+        SHELL_NAME="$(basename "$SHELL")"
+    fi
     case "$SHELL_NAME" in
         zsh)
             RC_FILE="$HOME/.zshrc"

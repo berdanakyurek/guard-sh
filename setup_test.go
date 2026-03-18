@@ -7,6 +7,64 @@ import (
 	"testing"
 )
 
+func TestDetectShell_PrefersVersionVars(t *testing.T) {
+	cases := []struct {
+		zshVersion  string
+		fishVersion string
+		bashVersion string
+		shellEnv    string
+		want        string
+	}{
+		// Version vars take priority over $SHELL
+		{zshVersion: "5.9", shellEnv: "/bin/bash", want: "zsh"},
+		{fishVersion: "3.7.0", shellEnv: "/bin/bash", want: "fish"},
+		{bashVersion: "5.2.0", shellEnv: "/bin/zsh", want: "bash"},
+		// Falls back to $SHELL when no version var is set
+		{shellEnv: "/bin/zsh", want: "zsh"},
+		{shellEnv: "/bin/bash", want: "bash"},
+	}
+
+	for _, tc := range cases {
+		t.Setenv("ZSH_VERSION", tc.zshVersion)
+		t.Setenv("FISH_VERSION", tc.fishVersion)
+		t.Setenv("BASH_VERSION", tc.bashVersion)
+		t.Setenv("SHELL", tc.shellEnv)
+
+		got := detectShell()
+		if got != tc.want {
+			t.Errorf("detectShell() = %q, want %q (ZSH=%q FISH=%q BASH=%q SHELL=%q)",
+				got, tc.want, tc.zshVersion, tc.fishVersion, tc.bashVersion, tc.shellEnv)
+		}
+	}
+}
+
+func TestSetup_DetectsActiveShell_NotLoginShell(t *testing.T) {
+	// Login shell is bash ($SHELL=/bin/bash) but ZSH_VERSION is set,
+	// meaning the user is actually running from zsh.
+	_, home := setupEnv(t, "/bin/bash")
+	t.Setenv("ZSH_VERSION", "5.9")
+	t.Setenv("BASH_VERSION", "")
+
+	runSetup()
+
+	// .zshrc should be written, not .bashrc
+	zshrc := filepath.Join(home, ".zshrc")
+	if _, err := os.Stat(zshrc); err != nil {
+		t.Fatal(".zshrc should have been created")
+	}
+	rc := readFile(t, zshrc)
+	if !strings.Contains(rc, "guard.zsh") {
+		t.Error(".zshrc missing guard.zsh source line")
+	}
+	bashrc := filepath.Join(home, ".bashrc")
+	if _, err := os.Stat(bashrc); err == nil {
+		content := readFile(t, bashrc)
+		if strings.Contains(content, "guard") {
+			t.Error(".bashrc should not have been modified when ZSH_VERSION is set")
+		}
+	}
+}
+
 func setupEnv(t *testing.T, shell string) (xdg, home string) {
 	t.Helper()
 	xdg = t.TempDir()

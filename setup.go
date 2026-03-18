@@ -62,7 +62,7 @@ func runSetup() {
 
 	// --- Shell integration ---
 	fmt.Println()
-	shellName := filepath.Base(os.Getenv("SHELL"))
+	shellName := detectShell()
 	var rcFile, scriptPath string
 	switch shellName {
 	case "zsh":
@@ -124,6 +124,24 @@ func runSetup() {
 func printNext(configPath string) {
 	fmt.Printf("  %snext%s  edit %s and set your api_key\n", bold, reset, configPath)
 	fmt.Printf("  %s      then restart your shell or run: source ~/.bashrc%s\n\n", dim, reset)
+}
+
+// detectShell returns the name of the currently running shell.
+// It checks shell-specific version variables first (which are exported to
+// child processes), then falls back to $SHELL (the login shell).
+// This matters when e.g. the user's login shell is bash but they are
+// running this command inside a zsh session.
+func detectShell() string {
+	if os.Getenv("ZSH_VERSION") != "" {
+		return "zsh"
+	}
+	if os.Getenv("FISH_VERSION") != "" {
+		return "fish"
+	}
+	if os.Getenv("BASH_VERSION") != "" {
+		return "bash"
+	}
+	return filepath.Base(os.Getenv("SHELL"))
 }
 
 func fatalf(format string, args ...any) {
