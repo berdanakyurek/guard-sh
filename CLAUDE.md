@@ -55,10 +55,15 @@ git push https://x-access-token:${TOKEN}@github.com/${GITHUB_REPO}.git HEAD
 ```bash
 # Build
 go build -o guard-sh .
+go build -ldflags "-X main.version=1.0.0" -o guard-sh .   # release build
 
 # Install (builds, deploys to ~/.local/bin, sets up shell integration)
 bash install.sh
 bash install.sh --without-shell   # skip shell integration
+
+# Uninstall
+bash uninstall.sh                 # removes binary, shell integration, config
+bash uninstall.sh --keep-config   # keeps ~/.config/guard-sh
 
 # Test
 go test ./...

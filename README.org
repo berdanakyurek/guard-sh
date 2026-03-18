@@ -58,7 +58,7 @@ This will:
 - Build the ~guard-sh~ binary and install it to =~/.local/bin/=
 - Copy the default config to =~/.config/guard-sh/config.yaml=
 - Copy the default prompt to =~/.config/guard-sh/prompt.txt=
-- Add shell integration to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish=
+- Add shell integration to the rc file of your *active* shell (bash → =.bashrc=, zsh → =.zshrc=, fish → =config.fish=)
 
 ** From binary
 
@@ -69,7 +69,7 @@ chmod +x ~/.local/bin/guard-sh
 guard-sh setup
 #+end_src
 
-This will create the config dir, write the shell integration scripts, and add them to your =.bashrc=, =.zshrc=, or =~/.config/fish/config.fish= depending on your current shell.
+This will create the config dir, write the shell integration scripts, and add them to the rc file of your active shell.
 
 ** Install without shell integration
 
@@ -79,7 +79,7 @@ bash install.sh --without-shell
 
 ** Multiple shells
 
-~install.sh~ and ~guard-sh setup~ only add integration for your *current shell* (based on ~$SHELL~). If you use multiple shells, run the command once from each:
+~install.sh~ and ~guard-sh setup~ only add integration for your *active shell* (detected via the parent process). If you use multiple shells, run the command once from each:
 
 #+begin_src bash
 # In bash
@@ -428,11 +428,6 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
   2  (?i)--password\s+\S+
   3  AKIA[0-9A-Z]{16}
 
-  redaction
-  1  (?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+
-  2  (?i)--password\s+\S+
-  3  AKIA[0-9A-Z]{16}
-
   shell
   bash    ~/.bashrc                      ● present
   zsh     ~/.zshrc                       ○ not found
@@ -515,7 +510,7 @@ Creates =~/.config/guard-sh/= with the default config and prompt, writes shell i
 guard-sh version
 #+end_src
 
-Prints the current version (e.g. ~v0.1.0~).
+Prints the current version (e.g. ~1.0.0~).
 
 * Providers
   :PROPERTIES:

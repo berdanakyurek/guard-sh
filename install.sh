@@ -27,7 +27,7 @@ if [[ $WITH_BUILD -eq 1 ]]; then
     echo "Building guard-sh..."
     mkdir -p "$BIN_DIR"
     cd "$INSTALL_DIR"
-    VERSION="${GUARD_SH_VERSION:-dev}"
+    VERSION="${GUARD_SH_VERSION:-1.0.0}"
     go build -ldflags "-X main.version=$VERSION" -o "$BIN_DIR/guard-sh" .
     echo "Binary installed: $BIN_DIR/guard-sh"
 else
