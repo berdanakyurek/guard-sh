@@ -334,7 +334,7 @@ Checks all configured providers without spending any tokens. Reports:
 guard-sh status
 #+end_src
 
-Shows session and global state, prompt path, timeout, cache stats, active providers, redaction patterns, and whitelist.
+Shows session and global state, prompt path, timeout, cache stats, active providers, redaction patterns, shell integration status, and whitelist.
 
 #+begin_example
   guard-sh
@@ -369,6 +369,16 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
   1  (?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+
   2  (?i)--password\s+\S+
   3  AKIA[0-9A-Z]{16}
+
+  redaction
+  1  (?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+
+  2  (?i)--password\s+\S+
+  3  AKIA[0-9A-Z]{16}
+
+  shell
+  bash    ~/.bashrc                      ● present
+  zsh     ~/.zshrc                       ○ not found
+  fish    ~/.config/fish/config.fish     ○ not found
 
   whitelist
   1  ls

@@ -162,6 +162,18 @@ func runStatus(args []string) {
 		}
 	}
 
+	fmt.Printf("\n  %sshell%s\n", bold, reset)
+	for _, s := range shellIntegrationChecks() {
+		shellCol := fmt.Sprintf("%-6s", s.Shell)
+		if s.Present {
+			fmt.Printf("  %s%s%s  %s%s%s  %s● present%s\n",
+				cyan, shellCol, reset, dim, s.RC, reset, green, reset)
+		} else {
+			fmt.Printf("  %s%s%s  %s%s%s  %s○ not found%s\n",
+				cyan, shellCol, reset, dim, s.RC, reset, dim, reset)
+		}
+	}
+
 	if len(cfg.CommandWhitelist) > 0 {
 		fmt.Printf("\n  %swhitelist%s\n", bold, reset)
 		const max = 10

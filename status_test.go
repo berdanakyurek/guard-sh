@@ -148,6 +148,40 @@ redaction:
 	}
 }
 
+func TestRunStatus_Shell_Present(t *testing.T) {
+	xdg, home := setupEnv(t, "/bin/bash")
+	dir := xdg + "/guard-sh"
+	writeConfig(t, dir, "provider_order: []\nproviders: {}\n")
+
+	// Write a .bashrc that contains the guard.bash marker
+	bashrc := filepath.Join(home, ".bashrc")
+	if err := os.WriteFile(bashrc, []byte(`source "`+dir+`/guard.bash"`+"\nguard-sh on\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	out := captureStdout(func() { runStatus(nil) })
+
+	if !strings.Contains(out, "bash") {
+		t.Error("status missing bash shell entry")
+	}
+	if !strings.Contains(out, "present") {
+		t.Error("status should show bash as present")
+	}
+}
+
+func TestRunStatus_Shell_NotFound(t *testing.T) {
+	xdg, _ := setupEnv(t, "/bin/bash")
+	dir := xdg + "/guard-sh"
+	writeConfig(t, dir, "provider_order: []\nproviders: {}\n")
+	// HOME is set to a temp dir with no .bashrc
+
+	out := captureStdout(func() { runStatus(nil) })
+
+	if !strings.Contains(out, "not found") {
+		t.Error("status should show shells as not found when rc files are absent")
+	}
+}
+
 func TestRunRedactList_Empty(t *testing.T) {
 	xdg, _ := setupEnv(t, "/bin/bash")
 	dir := xdg + "/guard-sh"
