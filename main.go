@@ -149,7 +149,17 @@ func runStatus(args []string) {
 	globalPatterns := globalRedaction.PatternBased.GetPatterns()
 	if len(globalPatterns) > 0 {
 		fmt.Printf("\n  %sredaction%s\n", bold, reset)
-		fmt.Printf("  %s  %s%d global patterns%s\n", label("patterns"), dim, len(globalPatterns), reset)
+		const maxPatterns = 10
+		shown := globalPatterns
+		if len(shown) > maxPatterns {
+			shown = shown[:maxPatterns]
+		}
+		for i, p := range shown {
+			fmt.Printf("  %s%d%s  %s%s%s\n", dim, i+1, reset, dim, p, reset)
+		}
+		if remaining := len(globalPatterns) - maxPatterns; remaining > 0 {
+			fmt.Printf("  %s+%d more (to see all, run \"guard-sh redact list\")%s\n", dim, remaining, reset)
+		}
 	}
 
 	if len(cfg.CommandWhitelist) > 0 {

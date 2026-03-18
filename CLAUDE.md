@@ -76,7 +76,7 @@ There is no Makefile.
 ```
 guard-sh on / off                   enable/disable for current session (handled by shell hook)
 guard-sh on --global / off --global   auto-enable/disable in every new terminal
-guard-sh status                 show session/global state, config, timeout, work dir, cache, providers, whitelist
+guard-sh status                 show session/global state, config, timeout, work dir, cache, providers, redaction patterns, whitelist
 guard-sh check "<cmd>"          core check — exit 0 if safe, exit 1 with warning if risky
 guard-sh check "<cmd>" --debug  trace whitelist hit, cache hit, provider attempts, LLM response
 guard-sh healthcheck            validate API keys, models, latency, shell integration
@@ -86,6 +86,7 @@ guard-sh provider order         interactive TUI: reorder providers with arrow ke
 guard-sh whitelist              list all whitelisted commands
 guard-sh whitelist add <cmd>    add a command (LLM never called for it)
 guard-sh whitelist remove <cmd> remove a command from the whitelist
+guard-sh redact list             list all global redaction patterns
 guard-sh redact pattern on       interactive: enable pattern-based redaction for a provider
 guard-sh redact pattern off      interactive: disable pattern-based redaction for a provider
 guard-sh redact entropy on       interactive: enable Shannon entropy-based redaction for a provider

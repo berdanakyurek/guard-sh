@@ -210,6 +210,7 @@ redaction:
 Toggle per-provider:
 
 #+begin_src bash
+guard-sh redact list          # list all global redaction patterns
 guard-sh redact pattern on    # interactively enable for a provider
 guard-sh redact pattern off   # interactively disable for a provider
 #+end_src
@@ -333,7 +334,7 @@ Checks all configured providers without spending any tokens. Reports:
 guard-sh status
 #+end_src
 
-Shows session and global state, prompt path, timeout, cache stats, active providers, and whitelist.
+Shows session and global state, prompt path, timeout, cache stats, active providers, redaction patterns, and whitelist.
 
 #+begin_example
   guard-sh
@@ -363,6 +364,11 @@ Shows session and global state, prompt path, timeout, cache stats, active provid
      model                deepseek-chat
      pattern redaction     ● on
      entropy redaction     ○ off
+
+  redaction
+  1  (?i)(password|passwd|secret|api[_-]?key|token|auth)\s*[=:]\s*\S+
+  2  (?i)--password\s+\S+
+  3  AKIA[0-9A-Z]{16}
 
   whitelist
   1  ls

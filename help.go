@@ -22,7 +22,7 @@ func runHelp() {
 
 	// Status
 	fmt.Printf("  %s\n", b("status"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, work dir, cache stats, providers, whitelist"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, work dir, cache stats, providers, redaction patterns, whitelist"))
 
 	// Debug
 	fmt.Printf("  %s\n", b("debug"))
@@ -46,6 +46,7 @@ func runHelp() {
 
 	// Redact
 	fmt.Printf("  %s\n", b("redact"))
+	fmt.Printf("  %s %s\n", c("guard-sh redact list"), d("list all global redaction patterns"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact pattern on"), d("interactively enable pattern-based redaction for a provider"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact pattern off"), d("interactively disable pattern-based redaction for a provider"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact entropy on"), d("interactively enable entropy-based redaction for a provider"))
