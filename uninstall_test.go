@@ -138,3 +138,66 @@ func TestRunUninstall_NoPurge_KeepsConfigDir(t *testing.T) {
 		t.Error("config.yaml should be kept without --purge")
 	}
 }
+
+func TestRunUninstall_RemovesShellScripts(t *testing.T) {
+	xdg, _ := setupEnv(t, "/bin/bash")
+	dir := xdg + "/guard-sh"
+	writeConfig(t, dir, "provider_order: []\nproviders: {}\n")
+
+	// Write shell scripts to the config dir
+	for _, name := range []string{"guard.bash", "guard.zsh", "guard.fish"} {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte("# script"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	captureStdout(func() { runUninstall(nil) })
+
+	for _, name := range []string{"guard.bash", "guard.zsh", "guard.fish"} {
+		path := filepath.Join(dir, name)
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Errorf("%s should be removed by uninstall", name)
+		}
+	}
+	// config.yaml must still be there
+	if _, err := os.Stat(filepath.Join(dir, "config.yaml")); err != nil {
+		t.Error("config.yaml should be kept without --purge")
+	}
+}
+
+func TestRunUninstall_CleansAllRcFiles(t *testing.T) {
+	xdg, home := setupEnv(t, "/bin/bash")
+	dir := xdg + "/guard-sh"
+	writeConfig(t, dir, "provider_order: []\nproviders: {}\n")
+
+	integration := func(script string) string {
+		return "# guard-sh\nsource \"" + dir + "/" + script + "\"\nguard-sh on\n"
+	}
+
+	bashrc := filepath.Join(home, ".bashrc")
+	zshrc := filepath.Join(home, ".zshrc")
+	fishCfg := filepath.Join(xdg, "fish", "config.fish")
+
+	if err := os.MkdirAll(filepath.Dir(fishCfg), 0755); err != nil {
+		t.Fatal(err)
+	}
+	for path, script := range map[string]string{
+		bashrc:  "guard.bash",
+		zshrc:   "guard.zsh",
+		fishCfg: "guard.fish",
+	} {
+		if err := os.WriteFile(path, []byte(integration(script)), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	captureStdout(func() { runUninstall(nil) })
+
+	for _, path := range []string{bashrc, zshrc, fishCfg} {
+		got := readFile(t, path)
+		if strings.Contains(got, "guard-sh") {
+			t.Errorf("%s not cleaned after uninstall: %q", path, got)
+		}
+	}
+}
