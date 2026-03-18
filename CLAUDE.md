@@ -95,6 +95,8 @@ guard-sh cache on/off           enable/disable response caching
 guard-sh cache size <n>         set max cached entries
 guard-sh cache clear            delete all cached responses
 guard-sh setup                  create config dir, write shell scripts, add shell integration to rc
+guard-sh uninstall              remove shell integration from rc files and shell scripts (keeps config)
+guard-sh uninstall --purge      also remove the config dir
 guard-sh help                   print all commands with descriptions
 guard-sh version                print version
 ```

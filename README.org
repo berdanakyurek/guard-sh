@@ -77,6 +77,64 @@ This will create the config dir, write the shell integration scripts, and add th
 bash install.sh --without-shell
 #+end_src
 
+** Multiple shells
+
+~install.sh~ and ~guard-sh setup~ only add integration for your *current shell* (based on ~$SHELL~). If you use multiple shells, run the command once from each:
+
+#+begin_src bash
+# In bash
+bash install.sh
+
+# In zsh
+bash install.sh
+
+# In fish
+bash install.sh
+#+end_src
+
+Or use ~guard-sh setup~ after installing the binary:
+
+#+begin_src bash
+# In bash
+guard-sh setup
+
+# Switch to zsh, then:
+guard-sh setup
+#+end_src
+
+* Uninstallation
+  :PROPERTIES:
+  :CUSTOM_ID: uninstallation
+  :END:
+
+** Using the shell script
+
+#+begin_src bash
+bash uninstall.sh
+#+end_src
+
+This removes the binary, shell integration from all rc files, and the config dir.
+
+To keep your config (providers, whitelist, cache):
+
+#+begin_src bash
+bash uninstall.sh --keep-config
+#+end_src
+
+** Using the built-in command
+
+#+begin_src bash
+guard-sh uninstall          # removes shell integration and shell scripts, keeps config
+guard-sh uninstall --purge  # also removes the config dir (~/.config/guard-sh)
+#+end_src
+
+After running ~guard-sh uninstall~, the binary itself is not removed (a running program cannot delete itself reliably). The command prints the path to remove manually:
+
+#+begin_example
+  next  remove the binary manually:
+        rm ~/.local/bin/guard-sh
+#+end_example
+
 * Configuration
   :PROPERTIES:
   :CUSTOM_ID: configuration
