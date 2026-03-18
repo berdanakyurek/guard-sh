@@ -287,7 +287,7 @@ func runWhitelist(args []string) {
 
 func main() {
 	if len(os.Args) >= 2 && (os.Args[1] == "on" || os.Args[1] == "off") {
-		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source /path/to/shell/guard.bash\n")
+		fmt.Fprintf(os.Stderr, "guard-sh: shell integration not loaded. Run: source %s/guard.bash\n", config.Dir())
 		os.Exit(2)
 	}
 

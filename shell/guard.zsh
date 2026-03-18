@@ -101,6 +101,13 @@ guard-sh() {
         off)
             [[ "$2" == "--global" ]] && _guard_global_off || _guard_disable
             ;;
+        status)
+            local session="off"
+            [[ "$(bindkey "^M")" == *_guard_zsh_accept_line* ]] && session="on"
+            local global="off"
+            grep -qF "guard-sh on" "$HOME/.zshrc" 2>/dev/null && global="on"
+            command guard-sh status --session="$session" --global="$global"
+            ;;
         *)
             command guard-sh "$@"
             ;;
