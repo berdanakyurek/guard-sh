@@ -11,7 +11,7 @@ import (
 func runRedact(args []string) {
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "Usage: guard-sh redact <type> [on|off]\n")
-		fmt.Fprintf(os.Stderr, "Types: pattern, entropy\n")
+		fmt.Fprintf(os.Stderr, "Types: pattern, entropy, list\n")
 		os.Exit(2)
 	}
 	switch args[0] {
@@ -19,10 +19,23 @@ func runRedact(args []string) {
 		runRedactType("pattern", args[1:])
 	case "entropy":
 		runRedactEntropyType(args[1:])
+	case "list":
+		runRedactList()
 	default:
 		fmt.Fprintf(os.Stderr, "guard-sh: unknown redaction type %q\n", args[0])
-		fmt.Fprintf(os.Stderr, "Types: pattern, entropy\n")
+		fmt.Fprintf(os.Stderr, "Types: pattern, entropy, list\n")
 		os.Exit(2)
+	}
+}
+
+func runRedactList() {
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "guard-sh: %v\n", err)
+		os.Exit(1)
+	}
+	for _, p := range cfg.Redaction.PatternBased.GetPatterns() {
+		fmt.Println(p)
 	}
 }
 

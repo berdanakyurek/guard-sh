@@ -55,10 +55,15 @@ git push https://x-access-token:${TOKEN}@github.com/${GITHUB_REPO}.git HEAD
 ```bash
 # Build
 go build -o guard-sh .
+go build -ldflags "-X main.version=1.0.0" -o guard-sh .   # release build
 
 # Install (builds, deploys to ~/.local/bin, sets up shell integration)
 bash install.sh
 bash install.sh --without-shell   # skip shell integration
+
+# Uninstall
+bash uninstall.sh                 # removes binary, shell integration, config
+bash uninstall.sh --keep-config   # keeps ~/.config/guard-sh
 
 # Test
 go test ./...
@@ -76,7 +81,7 @@ There is no Makefile.
 ```
 guard-sh on / off                   enable/disable for current session (handled by shell hook)
 guard-sh on --global / off --global   auto-enable/disable in every new terminal
-guard-sh status                 show session/global state, config, timeout, work dir, cache, providers, whitelist
+guard-sh status                 show session/global state, config, timeout, work dir, cache, providers, redaction patterns, shell integration, whitelist
 guard-sh check "<cmd>"          core check — exit 0 if safe, exit 1 with warning if risky
 guard-sh check "<cmd>" --debug  trace whitelist hit, cache hit, provider attempts, LLM response
 guard-sh healthcheck            validate API keys, models, latency, shell integration
@@ -86,6 +91,7 @@ guard-sh provider order         interactive TUI: reorder providers with arrow ke
 guard-sh whitelist              list all whitelisted commands
 guard-sh whitelist add <cmd>    add a command (LLM never called for it)
 guard-sh whitelist remove <cmd> remove a command from the whitelist
+guard-sh redact list             list all global redaction patterns
 guard-sh redact pattern on       interactive: enable pattern-based redaction for a provider
 guard-sh redact pattern off      interactive: disable pattern-based redaction for a provider
 guard-sh redact entropy on       interactive: enable Shannon entropy-based redaction for a provider
@@ -94,6 +100,8 @@ guard-sh cache on/off           enable/disable response caching
 guard-sh cache size <n>         set max cached entries
 guard-sh cache clear            delete all cached responses
 guard-sh setup                  create config dir, write shell scripts, add shell integration to rc
+guard-sh uninstall              remove shell integration from rc files and shell scripts (keeps config)
+guard-sh uninstall --purge      also remove the config dir
 guard-sh help                   print all commands with descriptions
 guard-sh version                print version
 ```

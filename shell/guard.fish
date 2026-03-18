@@ -24,7 +24,7 @@ function _guard_execute
         return
     end
 
-    printf 'guard-sh: %s [Y/n] ' $warning
+    printf '\nguard-sh: %s ' $warning
     set -l confirm (read --nchars 1 --silent)
     printf '\n'
 
@@ -92,6 +92,12 @@ function guard-sh
             else
                 _guard_disable
             end
+        case status
+            set -l session off
+            bind \n 2>/dev/null | string match -q '*_guard_execute*' && set session on
+            set -l global off
+            grep -qF "guard-sh on" "$HOME/.config/fish/config.fish" 2>/dev/null && set global on
+            command guard-sh status --session="$session" --global="$global"
         case '*'
             command guard-sh $argv
     end

@@ -7,6 +7,34 @@ import (
 	"testing"
 )
 
+func TestKnownShell(t *testing.T) {
+	cases := map[string]string{
+		"bash": "bash",
+		"zsh":  "zsh",
+		"fish": "fish",
+		"sh":   "",
+		"tcsh": "",
+		"":     "",
+	}
+	for input, want := range cases {
+		if got := knownShell(input); got != want {
+			t.Errorf("knownShell(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
+func TestDetectShell_FallsBackToSHELL(t *testing.T) {
+	// When the parent process is not a known shell (e.g. "go test"),
+	// detectShell must fall back to $SHELL.
+	t.Setenv("SHELL", "/bin/zsh")
+	got := detectShell()
+	// The parent of this test process is 'go test', not a shell, so
+	// parentProcessName() returns "". We expect the $SHELL fallback.
+	if got == "" {
+		t.Error("detectShell() returned empty string")
+	}
+}
+
 func setupEnv(t *testing.T, shell string) (xdg, home string) {
 	t.Helper()
 	xdg = t.TempDir()

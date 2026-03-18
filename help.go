@@ -22,7 +22,7 @@ func runHelp() {
 
 	// Status
 	fmt.Printf("  %s\n", b("status"))
-	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, work dir, cache stats, providers, whitelist"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh status"), d("show session/global state, prompt, timeout, work dir, cache stats, providers, redaction patterns, shell integration, whitelist"))
 
 	// Debug
 	fmt.Printf("  %s\n", b("debug"))
@@ -46,6 +46,7 @@ func runHelp() {
 
 	// Redact
 	fmt.Printf("  %s\n", b("redact"))
+	fmt.Printf("  %s %s\n", c("guard-sh redact list"), d("list all global redaction patterns"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact pattern on"), d("interactively enable pattern-based redaction for a provider"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact pattern off"), d("interactively disable pattern-based redaction for a provider"))
 	fmt.Printf("  %s %s\n", c("guard-sh redact entropy on"), d("interactively enable entropy-based redaction for a provider"))
@@ -64,9 +65,13 @@ func runHelp() {
 	fmt.Printf("  %s\n", d("~/.config/guard-sh/prompt.txt — default system prompt (edit without rebuild)"))
 	fmt.Printf("  %s\n\n", d("~/.config/guard-sh/prompt_<provider>.txt — per-provider prompt override"))
 
-	// Setup
+	// Setup / Uninstall
 	fmt.Printf("  %s\n", b("setup"))
 	fmt.Printf("  %s %s\n\n", c("guard-sh setup"), d("create config dir, write shell scripts, add shell integration"))
+
+	fmt.Printf("  %s\n", b("uninstall"))
+	fmt.Printf("  %s %s\n", c("guard-sh uninstall"), d("remove shell integration and shell scripts (keeps config)"))
+	fmt.Printf("  %s %s\n\n", c("guard-sh uninstall --purge"), d("remove shell integration, shell scripts, and config dir"))
 
 	// Version
 	fmt.Printf("  %s\n", b("version"))
